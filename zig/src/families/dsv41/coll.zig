@@ -87,6 +87,16 @@ pub const Site = struct {
     }
 };
 
+pub fn controlFrameBytes(pool: usize) usize {
+    return (pool + 1) * @sizeOf(i32) + (1 << 16);
+}
+
+pub const Control = struct {
+    ptr: *anyopaque,
+    send: *const fn (*anyopaque, []const u8) Error!void,
+    recv: *const fn (*anyopaque, []u8, u64) Error![]const u8,
+};
+
 pub const Coll = struct {
     ptr: *anyopaque,
     vtable: *const VTable,
@@ -95,6 +105,7 @@ pub const Coll = struct {
     /// Its all-gather may be captured into a graph (NCCL, or a device-proxy transport); a host-staged transport is not,
     /// so the rounds run eagerly with it (TF_DS_GRAPHS=1 is refused at open).
     capturable: bool,
+    control: ?Control = null,
 
     pub const VTable = struct {
         /// recv[r * bytes .. (r + 1) * bytes] = rank r's send, for every rank in rank order. Stream-ordered: reads `send`
@@ -185,6 +196,7 @@ pub const Identity = struct {
     /// model.Modalities as its tag (text 0, text_image 1)
     modalities: u8,
     plan: []const u8,
+    control_bytes: usize = 0,
 };
 
 /// Opens a rank's collectives over its links (handshake first): the transport a HIP build plugs in. Errors here are

@@ -17,6 +17,7 @@ const wc_write = 1;
 const tx_credit = 1;
 const tx_payload = 2;
 const rx_notify = 3;
+const rx_frames = 4;
 pub const version = 1;
 
 pub const Wire = struct {
@@ -31,22 +32,32 @@ pub const Wire = struct {
     rank: u16,
     progress_ns: u64,
     seq: u64 = 0,
+    bootstrap: ?Link = null,
     aborted: std.atomic.Value(bool) = .init(false),
     /// The exchange thread owns the QP. Other threads can abort it without touching verbs.
     failed: std.atomic.Value(u16) = .init(0),
 
     pub fn open(gpa: std.mem.Allocator, link: Link, device: []const u8, gid_index: u8, rank: u16, epoch: [16]u8, capacity: usize, progress_ns: u64) !*Wire {
+        return init(gpa, link, device, gid_index, rank, epoch, capacity, progress_ns, false);
+    }
+
+    pub fn openControl(gpa: std.mem.Allocator, link: Link, device: []const u8, gid_index: u8, rank: u16, epoch: [16]u8, capacity: usize, progress_ns: u64) !*Wire {
+        return init(gpa, link, device, gid_index, rank, epoch, capacity, progress_ns, true);
+    }
+
+    fn init(gpa: std.mem.Allocator, link: Link, device: []const u8, gid_index: u8, rank: u16, epoch: [16]u8, capacity: usize, progress_ns: u64, frames: bool) !*Wire {
         const w = try gpa.create(Wire);
         errdefer gpa.destroy(w);
         w.v = try fabric.verbs.Verbs.open(null);
         errdefer w.v.close();
         if (capacity == 0 or rank > 1) return error.BadSetting;
-        const len = try std.math.add(usize, capacity, header_bytes);
+        const len = if (frames) capacity else try std.math.add(usize, capacity, header_bytes);
+        const rx_len = if (frames) try std.math.mul(usize, len, rx_frames) else len;
         const prot: std.posix.PROT = .{ .READ = true, .WRITE = true };
         const flags: std.posix.MAP = .{ .TYPE = .PRIVATE, .ANONYMOUS = true };
         w.tx = try std.posix.mmap(null, len, prot, flags, -1, 0);
         errdefer std.posix.munmap(w.tx);
-        w.rx = try std.posix.mmap(null, len, prot, flags, -1, 0);
+        w.rx = try std.posix.mmap(null, rx_len, prot, flags, -1, 0);
         errdefer std.posix.munmap(w.rx);
         w.ep = try Endpoint.open(&w.v, device, .rc, depth, gid_index);
         // QP destruction must precede deregistration, and its PD must outlive the MRs.
@@ -58,7 +69,7 @@ pub const Wire = struct {
             len > w.ep.port.max_msg_sz) return error.BadVerbsPort;
         w.tx_mr = w.v.api.ibv_reg_mr(w.ep.pd, w.tx.ptr, len, 0) orelse return error.VerbsTxRegistration;
         tx_mr = w.tx_mr;
-        w.rx_mr = try w.ep.register(w.rx);
+        w.rx_mr = if (frames) w.v.api.ibv_reg_mr(w.ep.pd, w.rx.ptr, rx_len, abi.access_local_write) orelse return error.VerbsRxRegistration else try w.ep.register(w.rx);
         rx_mr = w.rx_mr;
 
         const mine = (Info{
@@ -68,7 +79,7 @@ pub const Wire = struct {
             .mtu = @intCast(w.ep.port.active_mtu),
             .gid = local.gid,
             .addr = @intFromPtr(w.rx.ptr),
-            .rkey = w.rx_mr.rkey,
+            .rkey = if (frames) 0 else w.rx_mr.rkey,
         }).encode();
         try link.send(&mine);
         var peer_buf: [Info.len]u8 = undefined;
@@ -80,7 +91,11 @@ pub const Wire = struct {
             .gid = w.remote.gid,
             .gid_index = 0,
         }, @min(w.ep.port.active_mtu, w.remote.mtu), .{});
-        for (0..depth) |_| try w.ep.receive(&.{}, 0, rx_notify);
+        if (frames) {
+            if (rank == 1) for (0..rx_frames) |slot| try w.postFrameReceive(slot);
+        } else {
+            for (0..depth) |_| try w.ep.receive(&.{}, 0, rx_notify);
+        }
         try link.send(&.{version});
         var ready: [1]u8 = undefined;
         if (!std.mem.eql(u8, try link.recv(&ready), &.{version})) return error.Mismatch;
@@ -88,6 +103,7 @@ pub const Wire = struct {
         w.rank = rank;
         w.progress_ns = progress_ns;
         w.seq = 0;
+        w.bootstrap = if (frames) link else null;
         w.aborted = .init(false);
         w.failed = .init(0);
         std.log.info("collectives: RC verbs on {s} GID index {d}, MTU {d}, registered host window {d} bytes", .{
@@ -211,6 +227,64 @@ pub const Wire = struct {
                 if (tcp.monotonicNs() -| last >= w.progress_ns) return error.Timeout;
                 std.atomic.spinLoopHint();
             }
+        }
+    }
+
+    pub fn sendFrame(w: *Wire, bytes: []const u8) Error!void {
+        if (w.rank != 0 or w.bootstrap == null or bytes.len == 0 or bytes.len > w.tx.len) return error.Mismatch;
+        try w.checkAbort();
+        @memcpy(w.tx[0..bytes.len], bytes);
+        var sge: abi.Sge = .{ .addr = @intFromPtr(w.tx.ptr), .length = @intCast(bytes.len), .lkey = w.tx_mr.lkey };
+        try w.post(.{ .wr_id = tx_payload, .sg_list = @ptrCast(&sge), .num_sge = 1, .opcode = abi.wr_send, .send_flags = abi.send_signaled });
+        const start = tcp.monotonicNs();
+        while (true) {
+            try w.checkAbort();
+            if (try w.poll(w.ep.scq)) |wc| {
+                if (wc.wr_id != tx_payload or wc.opcode != wc_send) return error.Mismatch;
+                return;
+            }
+            if (tcp.monotonicNs() -| start >= w.progress_ns) return error.Timeout;
+            std.atomic.spinLoopHint();
+        }
+    }
+
+    fn postFrameReceive(w: *Wire, slot: usize) Error!void {
+        const region = w.rx[slot * w.tx.len ..][0..w.tx.len];
+        w.ep.receive(region, w.rx_mr.lkey, slot) catch return error.SocketFailed;
+    }
+
+    pub fn recvFrame(w: *Wire, buf: []u8, spin_ns: u64) Error![]const u8 {
+        const link = w.bootstrap orelse return error.Mismatch;
+        if (w.rank != 1) return error.Mismatch;
+        const start = tcp.monotonicNs();
+        var last_probe = start;
+        var peer_gone = false;
+        while (true) {
+            try w.checkAbort();
+            if (try w.poll(w.ep.rcq)) |wc| {
+                if (wc.opcode != wc_recv or wc.wr_id >= rx_frames or wc.byte_len == 0 or
+                    wc.byte_len > w.tx.len or wc.byte_len > buf.len) return error.Mismatch;
+                const slot: usize = @intCast(wc.wr_id);
+                const frame = buf[0..wc.byte_len];
+                @memcpy(frame, w.rx[slot * w.tx.len ..][0..frame.len]);
+                try w.postFrameReceive(slot);
+                return frame;
+            }
+            if (peer_gone) return error.PeerLost;
+            const now = tcp.monotonicNs();
+            if (now -| last_probe >= std.time.ns_per_ms) {
+                // The bootstrap socket carries no more frames. EOF also detects an idle peer that exits.
+                var fd: std.c.pollfd = .{ .fd = link.fd, .events = std.c.POLL.IN, .revents = 0 };
+                const n = std.c.poll(@ptrCast(&fd), 1, 0);
+                if (n < 0 and std.c.errno(n) != .INTR) return error.SocketFailed;
+                peer_gone = n > 0; // Check the CQ again in case a final SEND raced the TCP close.
+                last_probe = now;
+                if (peer_gone) continue;
+            }
+            if (now -| start >= spin_ns) {
+                const ts: std.c.timespec = .{ .sec = 0, .nsec = 100 * std.time.ns_per_us };
+                _ = std.c.nanosleep(&ts, null);
+            } else std.atomic.spinLoopHint();
         }
     }
 

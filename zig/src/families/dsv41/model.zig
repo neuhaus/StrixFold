@@ -550,6 +550,7 @@ pub const Model = struct {
         if (gpu.backend == .hip) {
             id.kit_abi = gpu.kit.abi_version;
             id.kit_sha256 = m.kit.manifest_sha256;
+            id.control_bytes = coll.controlFrameBytes(m.pool_cap);
         }
         // (not the rank caches: each rank's file name carries its own content key, rank{r}of{w}-<key>.bin, so no part
         // of it is common to the ranks; the inputs' one bundle is checked per box against its pinned manifest hash,

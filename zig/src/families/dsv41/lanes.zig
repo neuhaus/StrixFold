@@ -20,6 +20,7 @@ const round = @import("round.zig");
 const draft = @import("draft.zig");
 const sampling = @import("sampling.zig");
 const link = @import("link.zig");
+const coll = @import("coll.zig");
 const gpu = @import("gpu");
 /// The vision tower's type: CUDA builds only (gpu.features.vision); an empty type a HIP build never fills.
 pub const VisionTower = if (gpu.features.vision) @import("vision.zig").Vision else opaque {};
@@ -447,6 +448,7 @@ const ring = 1024;
 pub const Lanes = struct {
     gpa: std.mem.Allocator,
     m: *Model,
+    control: ?coll.Control = null,
     peer: ?link.Link, // rank 1 (null: one rank); every follower gets each frame (Model.followers)
     vision: ?*VisionTower = null, // rank 0's tower (a vision checkpoint served with its kit's vision/; CUDA builds only)
     step: u64 = 0,
@@ -468,6 +470,7 @@ pub const Lanes = struct {
 
     pub fn init(gpa: std.mem.Allocator, m: *Model) Lanes {
         var ln: Lanes = .{ .gpa = gpa, .m = m, .peer = if (m.world > 1) m.peer() else null };
+        if (ln.peer != null) ln.control = m.coll.control;
         // the round costs by rows: ROUND_MS[min(rows, len) - 1] (the served table, or TF_DS_ROUND_MS)
         const t = m.round_ms;
         for (&ln.wc, 0..) |*c, i| c.* = .{ .width = @intCast(i + 1), .ms = t[@min(i, t.len - 1)] };
@@ -547,7 +550,11 @@ pub const Lanes = struct {
     /// step counts it only once it went out, so a frame that failed to build or send leaves rank 0 at rank 1's step.
     fn flush(self: *Lanes) !void {
         if (self.peer == null) return;
-        for (self.m.followers()) |l| try l.?.send(self.wire.buf.items);
+        if (self.control) |c| {
+            try c.send(c.ptr, self.wire.buf.items);
+        } else {
+            for (self.m.followers()) |l| try l.?.send(self.wire.buf.items);
+        }
         self.step += 1;
     }
 
@@ -1254,7 +1261,8 @@ pub var follow_prof: struct { rounds: u64 = 0, enqueue: u64 = 0, forward: u64 = 
 /// Rank 1 (each of ranks 1-3 on the four-node split): the primitives rank 0 sends, run in order until it says done.
 pub fn follow(gpa: std.mem.Allocator, m: *Model) !void {
     const peer = m.peer();
-    const buf = try gpa.alloc(u8, (m.pool_cap + 1) * 4 + (1 << 16));
+    const control = m.coll.control;
+    const buf = try gpa.alloc(u8, coll.controlFrameBytes(m.pool_cap));
     defer gpa.free(buf);
     var seqs: [max_streams]std.ArrayList(i32) = @splat(.empty);
     defer for (&seqs) |*q| q.deinit(gpa);
@@ -1275,7 +1283,9 @@ pub fn follow(gpa: std.mem.Allocator, m: *Model) !void {
     while (true) {
         // the next primitive, polled for 20 ms before the read blocks (rank 0 sends it a fraction of a millisecond
         // after this rank's GPU goes idle in a decode; a sleeping thread would add its core's wake-up to every frame)
-        var r: Reader = .{ .b = try peer.recvSpin(buf, 20 * std.time.ns_per_ms) };
+        const spin_ns = 20 * std.time.ns_per_ms;
+        const frame = if (control) |c| try c.recv(c.ptr, buf, spin_ns) else try peer.recvSpin(buf, spin_ns);
+        var r: Reader = .{ .b = frame };
         const kind: Kind = switch (try r.int(u8)) {
             1 => .fill_begin,
             2 => .fill_chunk,

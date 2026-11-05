@@ -121,9 +121,10 @@ COLL_VERBS_GID_INDEX_RANK0=1
 COLL_VERBS_GID_INDEX_RANK1=1
 ```
 
-Select the local HCA and GID for the same physical rail at each end. The `Fan` TCP connection carries setup and
-lane commands. Gather payloads use registered host buffers over RC verbs, with separate queue pairs for graph-sized
-slots and larger staged transfers. The latter still uses the existing GPU copy pipeline; a single work request on
+Select the local HCA and GID for the same physical rail at each end. TCP exchanges the startup settings and queue-pair
+descriptors, then stays open to detect a peer exit while the follower is idle. A dedicated RC SEND queue pair carries
+prompt IDs and lane commands. Gather payloads use registered host buffers on separate queue pairs for graph-sized slots
+and larger staged transfers. The latter still uses the existing GPU copy pipeline; a single work request on
 that path is at most 4 MiB of payload plus its header by default. For larger writes, set `COLL_CHUNK_MIB` on both
 ranks; the payload plus its header must fit the limit reported by both ports, and each rank registers two windows
 of that size. Benchmark different chunk sizes against the default to check how much GPU copy overlap they retain.

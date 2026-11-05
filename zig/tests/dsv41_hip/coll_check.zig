@@ -627,6 +627,26 @@ fn soak(e: *Env, gpa: std.mem.Allocator, seconds: u64, graphs: bool, out: *std.A
     return bad;
 }
 
+fn checkControl(gpa: std.mem.Allocator, control: coll.Control, rank: u32, capacity: usize) !void {
+    const buf = try gpa.alloc(u8, capacity);
+    defer gpa.free(buf);
+    const sizes = [_]usize{ 48, 256 << 10, capacity };
+    for (0..6) |i| {
+        const n = sizes[i % sizes.len];
+        if (rank == 0) {
+            for (buf[0..n], 0..) |*b, j| b.* = @truncate(j ^ (j >> 8) ^ i);
+            try control.send(control.ptr, buf[0..n]);
+        } else {
+            const frame = try control.recv(control.ptr, buf, 20 * std.time.ns_per_ms);
+            if (frame.len != n) return error.ControlFrameLength;
+            for (frame, 0..) |b, j| {
+                if (b != @as(u8, @truncate(j ^ (j >> 8) ^ i))) return error.ControlFrameCorrupt;
+            }
+        }
+    }
+    std.debug.print("verbs control: rank {d}, six frames up to {d} bytes checked\n", .{ rank, capacity });
+}
+
 pub fn main(init: std.process.Init) !u8 {
     const gpa = init.arena.allocator();
     const io = init.io;
@@ -684,12 +704,13 @@ pub fn main(init: std.process.Init) !u8 {
     defer s.deinit();
     var fan = try dsv41.fan.Fan.open(io, master, port, rank, 2);
     defer fan.close();
-    const id: coll.Identity = .{ .rank = rank, .world = 2, .kit_abi = 0, .kit_sha256 = @splat('0'), .modalities = 0, .plan = "tool=coll_check" };
+    const id: coll.Identity = .{ .rank = rank, .world = 2, .kit_abi = 0, .kit_sha256 = @splat('0'), .modalities = 0, .plan = "tool=coll_check", .control_bytes = coll.controlFrameBytes(1 << 20) };
     const caps = try ctx.caps();
     const kit: ?*gpu.Kit = if (kit_dir) |k| try gpu.Kit.open(gpa, io, &d, k, caps.archName(), .{}) else null;
     defer if (kit) |k| k.deinit();
     const c = try dsv41.tcp_coll.open(gpa, io, &ctx, kit, &fan, &id);
     defer c.close();
+    if (c.control) |control| try checkControl(gpa, control, rank, id.control_bytes);
     const max = @max(maxBytes(&prefill_chunk), maxBytes(&decode_round));
     var send = try gpu.DeviceBuffer.alloc(&d, max);
     defer send.free();

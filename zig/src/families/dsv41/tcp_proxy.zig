@@ -283,6 +283,7 @@ pub const TcpProxy = struct {
     host: *tcp_coll.TcpColl,
     w: ?wire.Wire,
     rdma: ?*verbs.Wire,
+    control: ?*verbs.Wire,
     slab: gpu.HostBuffer,
     shared: *Shared,
     dev: u64, // the slab's device address
@@ -324,7 +325,28 @@ pub const TcpProxy = struct {
     }
 
     fn coll_(t: *TcpProxy) coll.Coll {
-        return .{ .ptr = t, .vtable = &vtable, .rank = t.rank, .world = 2, .capturable = true };
+        return .{
+            .ptr = t, .vtable = &vtable, .rank = t.rank, .world = 2, .capturable = true,
+            .control = if (t.control != null) .{ .ptr = t, .send = sendControl, .recv = recvControl } else null,
+        };
+    }
+
+    fn sendControl(ptr: *anyopaque, bytes: []const u8) coll.Error!void {
+        const t: *TcpProxy = @ptrCast(@alignCast(ptr));
+        if (t.status()) |e| return e;
+        t.control.?.sendFrame(bytes) catch |e| {
+            t.poison(wireCode(e));
+            return t.status().?;
+        };
+    }
+
+    fn recvControl(ptr: *anyopaque, buf: []u8, spin_ns: u64) coll.Error![]const u8 {
+        const t: *TcpProxy = @ptrCast(@alignCast(ptr));
+        if (t.status()) |e| return e;
+        return t.control.?.recvFrame(buf, spin_ns) catch |e| {
+            t.poison(wireCode(e));
+            return t.status().?;
+        };
     }
 
     fn txSlot(t: *TcpProxy, slot: usize) []u8 {
@@ -352,6 +374,7 @@ pub const TcpProxy = struct {
         raiseAbort(t.shared);
         if (t.w) |*w| w.abort();
         if (t.rdma) |w| w.abort();
+        if (t.control) |w| w.abort();
         if (t.w2) |*w2| w2.abort();
         t.host.coll_().abort(.cancelled);
     }
@@ -476,10 +499,12 @@ pub const TcpProxy = struct {
         @atomicStore(u32, &t.shared.abort, 1, .release); // ends any device wait
         if (t.w) |*w| w.close(std.time.ns_per_s);
         if (t.rdma) |w| w.abort();
+        if (t.control) |w| w.abort();
         if (t.w2) |*w2| w2.close(std.time.ns_per_s);
         if (t.thread) |th| th.join();
         if (t.thread2) |th| th.join();
         if (t.rdma) |w| w.close(t.gpa);
+        if (t.control) |w| w.close(t.gpa);
         // kernels still queued see the abort word and return without touching the slab's data
         _ = t.d.api.hipDeviceSynchronize();
         t.slab.free();
@@ -515,9 +540,10 @@ pub fn open(gpa: std.mem.Allocator, io: std.Io, ctx: *const gpu.Context, kit: *c
     if (use_verbs and (device.len == 0 or device.len >= 64)) return error.BadSetting;
     const gid_index: u8 = if (use_verbs) std.math.cast(u8, try envU("TF_COLL_VERBS_GID_INDEX", 1)) orelse return error.BadSetting else 0;
     var extra_buf: [160]u8 = undefined;
-    const extra = try std.fmt.bufPrint(&extra_buf, "kind={s} slots={d} slot_kib={d} proxy_stripe_kib={d}", .{
-        if (use_verbs) "verbs-v1" else "proxy", nslot, slot_kib, stripe_kib,
-    });
+    const extra = if (use_verbs)
+        try std.fmt.bufPrint(&extra_buf, "kind=verbs-v2 slots={d} slot_kib={d} control_bytes={d}", .{ nslot, slot_kib, id.control_bytes })
+    else
+        try std.fmt.bufPrint(&extra_buf, "kind=proxy slots={d} slot_kib={d} proxy_stripe_kib={d}", .{ nslot, slot_kib, stripe_kib });
     const se = try tcp_coll.handshake(fan, id, extra);
     const rdma = if (use_verbs) try verbs.Wire.open(gpa, fan.links[0].?, device, gid_index,
         @intCast(id.rank), se.epoch, slot_bytes, se.settings.opt.progress_ns) else null;
@@ -534,6 +560,11 @@ pub fn open(gpa: std.mem.Allocator, io: std.Io, ctx: *const gpu.Context, kit: *c
     const host = if (use_verbs) try tcp_coll.openVerbsHost(gpa, d, id.rank, se, fan.links[0].?, device, gid_index) else
         try tcp_coll.openHost(gpa, d, id.rank, se, 0);
     errdefer host.coll_().vtable.close(host);
+    const control = if (use_verbs and id.control_bytes != 0)
+        try verbs.Wire.openControl(gpa, fan.links[0].?, device, gid_index, @intCast(id.rank), se.epoch, id.control_bytes, se.settings.opt.progress_ns)
+    else
+        null;
+    errdefer if (control) |v| v.close(gpa);
     const stage = try StageK.bind(kit, &.{});
     const collect = try CollectK.bind(kit, &.{});
     const caps = try ctx.caps();
@@ -551,6 +582,7 @@ pub fn open(gpa: std.mem.Allocator, io: std.Io, ctx: *const gpu.Context, kit: *c
         .host = host,
         .w = w,
         .rdma = rdma,
+        .control = control,
         .slab = slab,
         .shared = @ptrCast(@alignCast(slab.bytes.ptr)),
         .dev = try slab.device(),
