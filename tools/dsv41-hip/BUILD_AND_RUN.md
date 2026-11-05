@@ -106,6 +106,38 @@ drafts off (`DRAFTS=0`), HIP graphs on (`GRAPHS=1`, over `COLL_KIND=proxy`).
   tokens; longer windows need inputs prepared with more rows (the 1M-token runs in RESULTS did that).
 - **Drafts:** `DRAFTS=1` turns on DSpark drafting; it gives exactly the same text as drafts off.
 
+### Opt-in USB4 verbs transport (experimental)
+
+For two Linux HIP ranks with a working Donnerkeule provider, copy `serve.conf` and set:
+
+```sh
+MASTER_IP=192.0.2.10              # replace with rank 0's private Ethernet address
+TP_STRIPE=
+COLL_PROXY_STRIPE_KIB=0
+COLL_KIND=verbs
+COLL_VERBS_DEVICE_RANK0=usb4_rdma0
+COLL_VERBS_DEVICE_RANK1=usb4_rdma0
+COLL_VERBS_GID_INDEX_RANK0=1
+COLL_VERBS_GID_INDEX_RANK1=1
+```
+
+Select the local HCA and GID for the same physical rail at each end. The `Fan` TCP connection carries setup and
+lane commands. Gather payloads use registered host buffers over RC verbs, with separate queue pairs for graph-sized
+slots and larger staged transfers. The latter still uses the existing GPU copy pipeline; a single work request on
+that path is at most 4 MiB of payload plus its header by default. For larger writes, set `COLL_CHUNK_MIB` on both
+ranks; the payload plus its header must fit the limit reported by both ports, and each rank registers two windows
+of that size. Benchmark different chunk sizes against the default to check how much GPU copy overlap they retain.
+No kernel module changes or DMA-BUF support are required at the default size.
+The two peers must select the same collective kind, and a verbs failure poisons the session. Restart both ranks with
+their previous TCP settings to switch back.
+
+Before serving, use the installed `tf-dsv41-coll-check` on both ranks with `TF_COLL_KIND=verbs`,
+`TF_COLL_VERBS_DEVICE`, `TF_COLL_VERBS_GID_INDEX`, and `--kit DIR --graph 5 --prefill-chunks 1`.
+Check that both ranks report zero bad words, including the 40 MiB and 200 MiB gathers and graph replays. Test peer
+loss and restart, then use the same checkpoint, precision, request settings and prompt IDs for TCP/verbs output
+comparisons and timings. Match cache settings and run cold prefill with fresh state. The wire test alone is not a
+served model or performance qualification.
+
 ## 6. Check and measure
 
 ```

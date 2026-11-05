@@ -23,6 +23,7 @@ const gpu = @import("gpu");
 const coll = @import("coll.zig");
 const Fan = @import("fan.zig").Fan;
 const wire = @import("tcp_wire.zig");
+const verbs = @import("verbs_wire.zig");
 const tcp_coll = @import("tcp_coll.zig");
 
 const c = std.c;
@@ -71,13 +72,32 @@ const CollectK = gpu.Kernel("coll.collect", params.Collect);
 /// cable) while this one moves the first half, and done waits for both. Returns the failure code (0: stopped cleanly)
 /// after setting the abort word on any failure. Each failure, an exchange past `warn_ns` and a device wait that gave up
 /// log one line (rank, gather, site, bytes, ms).
+const DataWire = union(enum) {
+    tcp: *wire.Wire,
+    verbs: *verbs.Wire,
+
+    fn exchange(w: DataWire, site: u32, out: []const u8, in: []u8) wire.Error!void {
+        return switch (w) {
+            .tcp => |t| t.exchange(site, out, in),
+            .verbs => |v| v.exchange(site, out, in),
+        };
+    }
+
+    fn detail(w: DataWire) []const u8 {
+        return switch (w) {
+            .tcp => |t| if (t.status() != null) std.mem.sliceTo(&t.why, 0) else "",
+            .verbs => "RC verbs",
+        };
+    }
+};
+
 pub const Core = struct {
     shared: *Shared,
     tx: []u8, // nslot * slot_bytes
     rx: []u8,
     nslot: u32,
     slot_bytes: u64,
-    w: *wire.Wire,
+    w: DataWire,
     stop: *std.atomic.Value(u32),
     exchanged: *std.atomic.Value(u64),
     second: ?*Second = null,
@@ -118,7 +138,7 @@ pub const Core = struct {
             if (second) |s| s.hand(q, site, base + first, bytes - first);
             const t0 = wire.monotonicNs();
             k.w.exchange(site, k.tx[base..][0..first], k.rx[base..][0..first]) catch |e| {
-                logExchange(k.w, k.rank, 1, q, site, first, t0, @errorName(e));
+                logExchange(k.w.detail(), k.rank, 1, q, site, first, t0, @errorName(e));
                 return k.fail(wireCode(e));
             };
             if (second) |s| {
@@ -131,7 +151,7 @@ pub const Core = struct {
                     std.atomic.spinLoopHint();
                 }
             }
-            if (k.warn_ns > 0 and wire.monotonicNs() -| t0 > k.warn_ns) logExchange(k.w, k.rank, 1, q, site, bytes, t0, "done (this rank's coll.collect waited for it)");
+            if (k.warn_ns > 0 and wire.monotonicNs() -| t0 > k.warn_ns) logExchange(k.w.detail(), k.rank, 1, q, site, bytes, t0, "done (this rank's coll.collect waited for it)");
             @atomicStore(u64, &k.shared.slot[slot].done, q, .release);
             _ = k.exchanged.fetchAdd(1, .monotonic);
             q += 1;
@@ -168,10 +188,10 @@ fn deviceGaveUp(shared: *Shared, rank: u32, q: u64, nslot: u32, what: []const u8
 }
 
 /// One line about a proxy exchange: a failure (`outcome` the error) or one past the warn threshold.
-fn logExchange(w: *const wire.Wire, rank: u32, cable: u8, q: u64, site: u32, bytes: usize, t0: u64, outcome: []const u8) void {
+fn logExchange(detail: []const u8, rank: u32, cable: u8, q: u64, site: u32, bytes: usize, t0: u64, outcome: []const u8) void {
     std.log.warn("collectives: rank {d} proxy cable {d} exchange of gather {d} ({s} layer {d}, {d} bytes) after {d} ms: {s}{s}{s}", .{
         rank, cable, q, phaseName(site), site & 0xffff, bytes, (wire.monotonicNs() -| t0) / std.time.ns_per_ms, outcome,
-        if (w.status() != null) " " else "", if (w.status() != null) std.mem.sliceTo(&w.why, 0) else "",
+        if (detail.len > 0) " " else "", detail,
     });
 }
 
@@ -240,10 +260,10 @@ pub const Second = struct {
             idle_since = 0;
             const t0 = wire.monotonicNs();
             s.w.exchange(s.site, s.tx[s.off..][0..s.len], s.rx[s.off..][0..s.len]) catch |e| {
-                logExchange(s.w, s.rank, 2, q, s.site, s.len, t0, @errorName(e));
+                logExchange((DataWire{ .tcp = s.w }).detail(), s.rank, 2, q, s.site, s.len, t0, @errorName(e));
                 return s.fail(wireCode(e));
             };
-            if (s.warn_ns > 0 and wire.monotonicNs() -| t0 > s.warn_ns) logExchange(s.w, s.rank, 2, q, s.site, s.len, t0, "done");
+            if (s.warn_ns > 0 and wire.monotonicNs() -| t0 > s.warn_ns) logExchange((DataWire{ .tcp = s.w }).detail(), s.rank, 2, q, s.site, s.len, t0, "done");
             s.done.store(q, .release);
             last = q;
         }
@@ -261,7 +281,8 @@ pub const TcpProxy = struct {
     d: *const gpu.Driver,
     rank: u32,
     host: *tcp_coll.TcpColl,
-    w: wire.Wire,
+    w: ?wire.Wire,
+    rdma: ?*verbs.Wire,
     slab: gpu.HostBuffer,
     shared: *Shared,
     dev: u64, // the slab's device address
@@ -294,7 +315,7 @@ pub const TcpProxy = struct {
     /// (read after the stream synchronized: the proxy threads' wire counts are then settled)
     fn counts(ptr: *anyopaque) coll.Coll.Counts {
         const t: *TcpProxy = @ptrCast(@alignCast(ptr));
-        return .{ .staged = @atomicLoad(u64, &t.shared.seq, .acquire), .cable1 = t.w.seq, .cable2 = if (t.w2) |w2| w2.seq else 0, .host = t.host.w.seq };
+        return .{ .staged = @atomicLoad(u64, &t.shared.seq, .acquire), .cable1 = t.exchanged.load(.acquire), .cable2 = if (t.w2) |w2| w2.seq else 0, .host = t.host.coll_().counts().host };
     }
 
     fn check(ptr: *anyopaque) coll.Error!void {
@@ -329,9 +350,10 @@ pub const TcpProxy = struct {
     fn poison(t: *TcpProxy, code: u32) void {
         _ = t.failed.cmpxchgStrong(0, code, .acq_rel, .acquire);
         raiseAbort(t.shared);
-        t.w.abort();
+        if (t.w) |*w| w.abort();
+        if (t.rdma) |w| w.abort();
         if (t.w2) |*w2| w2.abort();
-        t.host.w.abort();
+        t.host.coll_().abort(.cancelled);
     }
 
     fn pin(cpu_: i32) void {
@@ -350,7 +372,7 @@ pub const TcpProxy = struct {
             .rx = t.slab.bytes[t.rx_off..][0 .. t.nslot * t.slot_bytes],
             .nslot = t.nslot,
             .slot_bytes = t.slot_bytes,
-            .w = &t.w,
+            .w = if (t.rdma) |w| .{ .verbs = w } else .{ .tcp = &t.w.? },
             .stop = &t.stop,
             .exchanged = &t.exchanged,
             .second = if (t.w2 != null) &t.second else null,
@@ -398,7 +420,7 @@ pub const TcpProxy = struct {
                 t.poison(5);
                 return error.CollectiveFailed;
             }
-            try t.host.coll_().vtable.gather_begin.?(t.host, stream, site, send, recv, bytes);
+            t.host.coll_().vtable.gather_begin.?(t.host, stream, site, send, recv, bytes) catch |e| return t.hostFailure(e);
             t.begun = .{ .host = true, .recv = recv, .bytes = bytes };
             return;
         }
@@ -417,7 +439,10 @@ pub const TcpProxy = struct {
         const t: *TcpProxy = @ptrCast(@alignCast(ptr));
         const b = t.begun orelse return t.misuse("a gather ended that was never begun");
         t.begun = null;
-        if (b.host) return t.host.coll_().vtable.gather_end.?(t.host, stream);
+        if (b.host) {
+            t.host.coll_().vtable.gather_end.?(t.host, stream) catch |e| return t.hostFailure(e);
+            return;
+        }
         if (t.status()) |e| return e;
         if (b.bytes == 0) return;
         const peer: u64 = 1 - t.rank;
@@ -428,21 +453,33 @@ pub const TcpProxy = struct {
         };
     }
 
+    fn hostFailure(t: *TcpProxy, e: coll.Error) coll.Error {
+        t.poison(switch (e) {
+            error.PeerLost => 1,
+            error.Timeout => 2,
+            error.Mismatch => 3,
+            error.Aborted => 4,
+            error.CollectiveFailed => 5,
+        });
+        return e;
+    }
+
     fn abort(ptr: *anyopaque, reason: coll.Reason) void {
         _ = reason;
         const t: *TcpProxy = @ptrCast(@alignCast(ptr));
         t.poison(4);
-        t.host.coll_().vtable.abort(t.host, .cancelled);
     }
 
     fn close(ptr: *anyopaque) void {
         const t: *TcpProxy = @ptrCast(@alignCast(ptr));
         t.stop.store(1, .release);
         @atomicStore(u32, &t.shared.abort, 1, .release); // ends any device wait
-        t.w.close(std.time.ns_per_s);
+        if (t.w) |*w| w.close(std.time.ns_per_s);
+        if (t.rdma) |w| w.abort();
         if (t.w2) |*w2| w2.close(std.time.ns_per_s);
         if (t.thread) |th| th.join();
         if (t.thread2) |th| th.join();
+        if (t.rdma) |w| w.close(t.gpa);
         // kernels still queued see the abort word and return without touching the slab's data
         _ = t.d.api.hipDeviceSynchronize();
         t.slab.free();
@@ -462,29 +499,40 @@ fn envU(name: [:0]const u8, default: u64) !u64 {
     return std.fmt.parseInt(u64, std.mem.span(v), 10) catch error.BadSetting;
 }
 
-pub fn open(gpa: std.mem.Allocator, io: std.Io, ctx: *const gpu.Context, kit: *const gpu.Kit, fan: *const Fan, id: *const coll.Identity) anyerror!coll.Coll {
+pub fn open(gpa: std.mem.Allocator, io: std.Io, ctx: *const gpu.Context, kit: *const gpu.Kit, fan: *const Fan, id: *const coll.Identity, use_verbs: bool) anyerror!coll.Coll {
     _ = io;
     const d = ctx.d;
     const nslot: u32 = @intCast(try envU("TF_COLL_SLOTS", 8));
     if (nslot < 2 or nslot > max_slots) return error.BadSetting;
     const slot_kib = try envU("TF_COLL_SLOT_KIB", 4352); // 4.25 MiB: a 16-row head gather (4,136,960 B) fits
+    if (slot_kib == 0 or slot_kib > std.math.maxInt(u32) / 1024 - 4) return error.BadSetting;
     const slot_bytes = std.mem.alignForward(u64, slot_kib << 10, 4096);
     const proxy_cpu: i32 = @intCast(try envU("TF_COLL_PROXY_CPU", 6));
     const proxy_cpu2: i32 = @intCast(try envU("TF_COLL_PROXY_CPU2", 7));
     const stripe_kib = try envU("TF_COLL_PROXY_STRIPE_KIB", 0);
-    var extra_buf: [128]u8 = undefined;
-    const extra = try std.fmt.bufPrint(&extra_buf, "kind=proxy slots={d} slot_kib={d} proxy_stripe_kib={d}", .{ nslot, slot_kib, stripe_kib });
+    if (use_verbs and (stripe_kib != 0 or c.getenv("TF_TP_STRIPE") != null)) return error.VerbsProxyStripingUnsupported;
+    const device = if (use_verbs) std.mem.span(c.getenv("TF_COLL_VERBS_DEVICE") orelse return error.MissingVerbsDevice) else "";
+    if (use_verbs and (device.len == 0 or device.len >= 64)) return error.BadSetting;
+    const gid_index: u8 = if (use_verbs) std.math.cast(u8, try envU("TF_COLL_VERBS_GID_INDEX", 1)) orelse return error.BadSetting else 0;
+    var extra_buf: [160]u8 = undefined;
+    const extra = try std.fmt.bufPrint(&extra_buf, "kind={s} slots={d} slot_kib={d} proxy_stripe_kib={d}", .{
+        if (use_verbs) "verbs-v1" else "proxy", nslot, slot_kib, stripe_kib,
+    });
     const se = try tcp_coll.handshake(fan, id, extra);
-    // the proxy's own links past tcp_host's data ports: thunderbolt0 (the control link's address), and with a stripe
-    // size the session's second cable, its own wire for the second thread
-    var w = try wire.Wire.open(@intCast(id.rank), se.addrs[0..1], se.settings.data_port + 8, se.epoch, se.settings.opt);
-    errdefer w.close(std.time.ns_per_s);
+    const rdma = if (use_verbs) try verbs.Wire.open(gpa, fan.links[0].?, device, gid_index,
+        @intCast(id.rank), se.epoch, slot_bytes, se.settings.opt.progress_ns) else null;
+    errdefer if (rdma) |v| v.close(gpa);
+    // The TCP proxy's own links are separate from the host links used for oversized gathers.
+    var w: ?wire.Wire = if (use_verbs) null else
+        try wire.Wire.open(@intCast(id.rank), se.addrs[0..1], se.settings.data_port + 8, se.epoch, se.settings.opt);
+    errdefer if (w) |*x| x.close(std.time.ns_per_s);
     var w2: ?wire.Wire = if (stripe_kib > 0 and se.links > 1)
         try wire.Wire.open(@intCast(id.rank), se.addrs[1..2], se.settings.data_port + 9, se.epoch, se.settings.opt)
     else
         null;
     errdefer if (w2) |*x| x.close(std.time.ns_per_s);
-    const host = try tcp_coll.openHost(gpa, d, id.rank, se, 0);
+    const host = if (use_verbs) try tcp_coll.openVerbsHost(gpa, d, id.rank, se, fan.links[0].?, device, gid_index) else
+        try tcp_coll.openHost(gpa, d, id.rank, se, 0);
     errdefer host.coll_().vtable.close(host);
     const stage = try StageK.bind(kit, &.{});
     const collect = try CollectK.bind(kit, &.{});
@@ -502,6 +550,7 @@ pub fn open(gpa: std.mem.Allocator, io: std.Io, ctx: *const gpu.Context, kit: *c
         .rank = id.rank,
         .host = host,
         .w = w,
+        .rdma = rdma,
         .slab = slab,
         .shared = @ptrCast(@alignCast(slab.bytes.ptr)),
         .dev = try slab.device(),
@@ -526,7 +575,9 @@ pub fn open(gpa: std.mem.Allocator, io: std.Io, ctx: *const gpu.Context, kit: *c
         th.join();
     };
     t.thread = try std.Thread.spawn(.{}, TcpProxy.proxyLoop, .{t});
-    if (t.w2 != null) {
+    if (use_verbs) {
+        std.log.info("collectives: verbs proxy with {d} slots of {d} KiB, CPU {d}; oversized gathers use a separate verbs QP", .{ nslot, slot_bytes >> 10, proxy_cpu });
+    } else if (t.w2 != null) {
         std.log.info("collectives: tcp_proxy with {d} slots of {d} KiB (coherent slab {d} MiB), proxy threads on CPUs {d} and {d}, gathers of {d} KiB and more split over both cables; larger gathers through tcp_host", .{ nslot, slot_bytes >> 10, slab.bytes.len >> 20, proxy_cpu, proxy_cpu2, stripe_kib });
     } else {
         std.log.info("collectives: tcp_proxy with {d} slots of {d} KiB (coherent slab {d} MiB), proxy thread on CPU {d}; larger gathers through tcp_host", .{ nslot, slot_bytes >> 10, slab.bytes.len >> 20, proxy_cpu });
@@ -604,7 +655,7 @@ const Rank = struct {
     code2: u32 = 0,
 
     fn core(r: *Rank) Core {
-        return .{ .shared = &r.shared, .tx = &r.tx, .rx = &r.rx, .nslot = 4, .slot_bytes = 32768, .w = &r.w, .stop = &r.stop, .exchanged = &r.exchanged, .second = if (r.w2 != null) &r.second else null, .stripe_min = r.stripe_min };
+        return .{ .shared = &r.shared, .tx = &r.tx, .rx = &r.rx, .nslot = 4, .slot_bytes = 32768, .w = .{ .tcp = &r.w }, .stop = &r.stop, .exchanged = &r.exchanged, .second = if (r.w2 != null) &r.second else null, .stripe_min = r.stripe_min };
     }
 
     fn runCore(r: *Rank) void {

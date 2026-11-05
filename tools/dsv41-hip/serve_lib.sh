@@ -28,8 +28,24 @@ serve_load() {
   done
   # the engine reads the pool's positions plus a round's 48 rows and one (model.zig rope_rows), 128 B a row
   [ "$CONTEXT" -le $((rows - 49)) ] || die "CONTEXT $CONTEXT is past the RoPE tables' $rows rows (at most $((rows - 49)))"
-  [ "$GRAPHS" = 0 ] || [ "$TRANSPORT" != tcp ] || [ "$COLL_KIND" = proxy ] || die "GRAPHS=1 over tcp needs COLL_KIND=proxy"
-  [ "$GRAPHS" = 0 ] || [ "$COLL_KIND" != proxy ] || [ $((ROUND_ROWS * 64640 * 4)) -le $((COLL_SLOT_KIB * 1024)) ] ||
+  case "$COLL_KIND" in
+    host|proxy) ;;
+    verbs)
+      [ "$WORLD" = 2 ] || die "COLL_KIND=verbs requires WORLD=2"
+      [ -z "$TP_STRIPE" ] && [ "${COLL_PROXY_STRIPE_KIB:-0}" = 0 ] || die "COLL_KIND=verbs uses one rail: clear TP_STRIPE and set COLL_PROXY_STRIPE_KIB=0"
+      if [ "$RANK" = 0 ]; then
+        COLL_VERBS_DEVICE=${COLL_VERBS_DEVICE_RANK0:-}
+        COLL_VERBS_GID_INDEX=${COLL_VERBS_GID_INDEX_RANK0:-1}
+      else
+        COLL_VERBS_DEVICE=${COLL_VERBS_DEVICE_RANK1:-}
+        COLL_VERBS_GID_INDEX=${COLL_VERBS_GID_INDEX_RANK1:-1}
+      fi
+      [ -n "$COLL_VERBS_DEVICE" ] || die "set COLL_VERBS_DEVICE_RANK$RANK"
+      ;;
+    *) die "COLL_KIND must be host, proxy or verbs" ;;
+  esac
+  [ "$GRAPHS" = 0 ] || [ "$COLL_KIND" != host ] || die "GRAPHS=1 requires COLL_KIND=proxy or verbs"
+  [ "$GRAPHS" = 0 ] || [ $((ROUND_ROWS * 64640 * 4)) -le $((COLL_SLOT_KIB * 1024)) ] ||
     die "GRAPHS=1: the head gather at ROUND_ROWS=$ROUND_ROWS ($((ROUND_ROWS * 64640 * 4)) B) exceeds COLL_SLOT_KIB=$COLL_SLOT_KIB"
   # (a configuration written before these settings existed runs with them off)
   REPLAY_FLOOR=${REPLAY_FLOOR:-0} HC_SIDE=${HC_SIDE:-0} ENGRAM_AIO=${ENGRAM_AIO:-0} TOP_K_MAX=${TOP_K_MAX:-0} SEED_RANDOM=${SEED_RANDOM:-0}
@@ -89,9 +105,11 @@ serve_env() {
     TF_GPU_STRICT="$GPU_STRICT" TF_HIP_DEVICE="$HIP_DEVICE" TENSORFOLD_HIP_MEMORY_LIMIT_GB="$MEMORY_LIMIT_GB"
     TF_DS_MODALITIES="$MODALITIES" TF_DS_GRAPHS="$GRAPHS" TF_DS_ARENA_GIB="$ARENA_GIB"
     TF_COLL_STRIPE_MIB="$COLL_STRIPE_MIB" TF_COLL_RTO_MIN_US="$COLL_RTO_MIN_US" TF_COLL_PROGRESS_MS="$COLL_PROGRESS_MS"
-    TF_COLL_STAGING="$COLL_STAGING" TF_COLL_KIND="$COLL_KIND" TF_DS_AUX="$AUX" TF_DS_REPLAY_FLOOR="$REPLAY_FLOOR")
-  [ "$COLL_KIND" = proxy ] && SERVE_ENV+=(TF_COLL_PROXY_CPU="$COLL_PROXY_CPU" TF_COLL_SLOT_KIB="$COLL_SLOT_KIB"
+    TF_COLL_STAGING="$COLL_STAGING" TF_COLL_CHUNK_MIB="${COLL_CHUNK_MIB:-4}" TF_COLL_KIND="$COLL_KIND"
+    TF_DS_AUX="$AUX" TF_DS_REPLAY_FLOOR="$REPLAY_FLOOR")
+  [ "$COLL_KIND" != host ] && SERVE_ENV+=(TF_COLL_PROXY_CPU="$COLL_PROXY_CPU" TF_COLL_SLOT_KIB="$COLL_SLOT_KIB"
     TF_COLL_PROXY_STRIPE_KIB="${COLL_PROXY_STRIPE_KIB:-0}" TF_COLL_PROXY_CPU2="${COLL_PROXY_CPU2:-7}")
+  [ "$COLL_KIND" = verbs ] && SERVE_ENV+=(TF_COLL_VERBS_DEVICE="$COLL_VERBS_DEVICE" TF_COLL_VERBS_GID_INDEX="$COLL_VERBS_GID_INDEX")
   [ -n "${COLL_GPU_WAIT_S:-}" ] && SERVE_ENV+=(TF_COLL_GPU_WAIT_S="$COLL_GPU_WAIT_S")  # (a conf without them: the engine's)
   [ -n "${COLL_GPU_WARN_S:-}" ] && SERVE_ENV+=(TF_COLL_GPU_WARN_S="$COLL_GPU_WARN_S")
   [ -n "$TP_DATA_PORT" ] && SERVE_ENV+=(TF_TP_DATA_PORT="$TP_DATA_PORT")

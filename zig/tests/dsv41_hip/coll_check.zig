@@ -13,7 +13,7 @@
 //! Both ranks run the same sequence. Take the GPU/link lock and the quiet lock on both boxes (node0 first). Settings
 //! come from the environment as in serving (TF_TP_STRIPE, TF_COLL_*).
 //!
-//! With TF_COLL_KIND=proxy (tcp_proxy.zig) give --kit (the dsv41 kit with coll.hip). --graph N then also captures one
+//! With TF_COLL_KIND=proxy or verbs give --kit (the dsv41 kit with coll.hip). --graph N then also captures one
 //! DSpark pass (94 gathers, each into its own send and recv region) into a HIP graph and replays it N times, writing
 //! fresh patterns before each replay and checking every word after it, then times N back-to-back replays.
 //!
@@ -361,7 +361,7 @@ const GraphPass = struct {
 /// `reps` replays back to back timed. Returns the bad word count.
 fn graphTest(e: *Env, gpa: std.mem.Allocator, reps: usize, out: *std.ArrayList(u8)) !usize {
     if (!e.c.capturable) {
-        std.debug.print("graph test skipped: this collective is not capturable (TF_COLL_KIND=proxy)\n", .{});
+        std.debug.print("graph test skipped: this collective is not capturable (use TF_COLL_KIND=proxy or verbs)\n", .{});
         return 0;
     }
     var p = try GraphPass.init(e, gpa);

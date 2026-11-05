@@ -165,8 +165,7 @@ fn lanesModule(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.bu
     return b.createModule(.{ .root_source_file = b.path("zig/src/core/lanes/lanes.zig"), .target = target, .optimize = optimize, .link_libc = true });
 }
 
-/// The dsv41 family on HIP (`root` dsv41.zig for programs, hip_test.zig for its tests): gpu (HIP), lanes and core;
-/// no cuda, nccl or fabric module exists in this graph. hipblas_abi_check.c checks hipblas.zig against the headers.
+/// HIP family module: verbs loads only when selected; the HIP graph has no CUDA or NCCL module.
 fn familyModule(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode, o: Options, gpu: *std.Build.Module, lanes: *std.Build.Module, root: []const u8) *std.Build.Module {
     return familyWith(b, target, optimize, o, gpu, lanes, coreModule(b, target, optimize), root);
 }
@@ -176,6 +175,7 @@ fn familyWith(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.bui
     m.addImport("gpu", gpu);
     m.addImport("lanes", lanes);
     m.addImport("core", core);
+    m.addImport("fabric", b.createModule(.{ .root_source_file = b.path("zig/src/fabric/fabric.zig"), .target = target, .optimize = optimize, .link_libc = true }));
     m.addIncludePath(.{ .cwd_relative = o.include });
     m.addCSourceFile(.{ .file = b.path("zig/src/families/dsv41/hipblas_abi_check.c"), .flags = &.{ "-std=c11", "-D__HIP_PLATFORM_AMD__", "-Wall", "-Werror" } });
     // hip_load.zig's test holds its kernel specs to the registry
@@ -402,7 +402,7 @@ pub fn targets(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.bu
     native.dependOn(&b.addInstallArtifact(layer_gate, .{ .dest_dir = .{ .override = bin } }).step);
     native.dependOn(&b.addInstallArtifact(tool, .{ .dest_dir = .{ .override = bin } }).step);
     native.dependOn(&install_kit.step);
-    // no NVIDIA library or entry point anywhere in the HIP binaries (their module graphs hold no cuda, nccl or fabric
+    // no NVIDIA library or entry point anywhere in the HIP binaries (their module graphs hold no CUDA or NCCL
     // module, so an import of one would not compile; this checks the linked bytes)
     const no_cuda = b.step("dsv41-hip-no-cuda", "Check the native-hip binaries for NVIDIA library and entry-point names");
     no_cuda.dependOn(noNvidia(b, server));

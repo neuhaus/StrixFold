@@ -1,38 +1,11 @@
-//! tcp_host: the TP2 collectives over host-staged TCP on the USB4 links (tools/dsv41-hip/COLLECTIVES-DESIGN.md
-//! sections 2-3). Each all-gather copies this rank's block to pinned memory once the stream reaches it, exchanges it
-//! with the peer over tcp_wire (spinning, SO_BUSY_POLL, one socket per cable), and queues the peer's block and its own
-//! block into `recv` on the caller's stream. Eager only (capturable = false): the host thread blocks in the call. Split
-//! (coll.Coll.gatherBegin / gatherEnd), the copies start at the begin on a copy stream and the host thread blocks only
-//! in the end, so the GPU runs the work queued in between while the bytes move.
-//!
-//! Opening it: the peers' handshake on the ranks' control link (fan.zig's Link) compares coll.Identity plus this
-//! transport's settings and refuses the open on a difference, naming the fields; then the data links connect with the
-//! session epoch both ranks drew. Settings (environment, read by both ranks, compared in the handshake):
-//!   TF_TP_DATA_PORT   first data port (default: the control link's port + 16; link i uses port + i)
-//!   TF_TP_STRIPE      rank 0's address on the second cable, e.g. 10.40.1.1 (default: one data link)
-//!   TF_COLL_STRIPE_MIB  payloads of at least this many MiB are split over both links (default 4)
-//!   TF_COLL_RTO_MIN_US  TCP_RTO_MIN_US per data socket (default 8000; 0 keeps the kernel's 200 ms floor)
-//!   TF_COLL_PROGRESS_MS a call fails with Timeout when nothing moves for this long (default 2000)
-//!   TF_COLL_KIND      host (default; eager only) or proxy (tcp_proxy.zig: kernels + a proxy thread, capturable)
-//!   TF_COLL_PIPE_MIB  gathers of at least this many MiB are pipelined in chunks (default 8; 0 disables): the copy
-//!                     of chunk k+1 to host memory and the upload of chunk k-1 overlap the exchange of chunk k; the
-//!                     own block's copy runs on the copy stream too, off the caller's stream
-//!   TF_COLL_CHUNK_MIB the chunk size of a pipelined gather (default 4)
-//!   TF_COLL_STAGING   dma (default): hipMemcpyDtoHAsync/HtoDAsync through ordinary pinned memory; blit: mapped
-//!                     coherent pinned memory with device-side copies on the stream. Measured alike (DSpark round
-//!                     11.6-11.7 ms dma vs 12.2-12.7 ms blit, transport alone ~5.5 ms): the cost is the per-call
-//!                     synchronization, not the copy engine
-//!   TF_COLL_GPU_WAIT_S  a GPU wait longer than this many seconds fails the collective (1-600, default 10): tcp_host's
-//!                     host waits (this rank's block reaching pinned memory, the previous upload) and tcp_proxy's
-//!                     device waits (a free slot, the peer's block)
-//! and one that is this rank's own (not compared): TF_COLL_GPU_WARN_S (0-600, default 2; 0: never), a GPU wait longer
-//! than this many seconds is logged when it ends, one line (rank, operation, site, bytes, chunk, ms, outcome)
+//! Eager HIP TP2 gather: stage, exchange and upload. See tools/dsv41-hip/COLLECTIVES-DESIGN.md.
 const std = @import("std");
 const gpu = @import("gpu");
 const coll = @import("coll.zig");
 const Fan = @import("fan.zig").Fan;
 const Link = @import("link.zig").Link;
 const wire = @import("tcp_wire.zig");
+const HostWire = @import("coll_wire.zig").HostWire;
 
 const c = std.c;
 const hello_magic: u32 = 0x31484354; // "TCH1"
@@ -78,7 +51,7 @@ pub const TcpColl = struct {
     gpa: std.mem.Allocator,
     d: *const gpu.Driver,
     rank: u32,
-    w: wire.Wire,
+    w: HostWire,
     tx: ?gpu.HostBuffer = null,
     rx: ?gpu.HostBuffer = null,
     staged: gpu.Event,
@@ -107,7 +80,7 @@ pub const TcpColl = struct {
 
     fn counts(ptr: *anyopaque) coll.Coll.Counts {
         const t: *TcpColl = @ptrCast(@alignCast(ptr));
-        return .{ .host = t.w.seq };
+        return .{ .host = t.w.seq() };
     }
 
     fn check(ptr: *anyopaque) coll.Error!void {
@@ -202,7 +175,7 @@ pub const TcpColl = struct {
 
     fn logWait(t: *TcpColl, what: Wait, ms: u64, outcome: []const u8) void {
         std.log.warn("collectives: rank {d} tcp_host waited {d} ms for its GPU ({s}, {s} layer {d}, {d} bytes, chunk {d} of {d}, after exchange {d}): {s}", .{
-            t.rank, ms, what.op, @tagName(what.site.phase), what.site.layer, what.bytes, what.chunk + 1, what.chunks, t.w.seq, outcome,
+            t.rank, ms, what.op, @tagName(what.site.phase), what.site.layer, what.bytes, what.chunk + 1, what.chunks, t.w.seq(), outcome,
         });
     }
 
@@ -212,7 +185,7 @@ pub const TcpColl = struct {
         const site_word = (@as(u32, @intFromEnum(site.phase)) << 16) | site.layer;
         t.w.exchange(site_word, tx, rx) catch |e| {
             std.log.warn("collectives: rank {d} tcp_host exchange {d} failed after {d} ms ({s} layer {d}, {d} bytes, chunk {d} of {d}): {s} ({s})", .{
-                t.rank, t.w.seq, (wire.monotonicNs() -| t0) / std.time.ns_per_ms, @tagName(site.phase), site.layer, tx.len, chunk + 1, chunks, @errorName(e), std.mem.sliceTo(&t.w.why, 0),
+                t.rank, t.w.seq(), (wire.monotonicNs() -| t0) / std.time.ns_per_ms, @tagName(site.phase), site.layer, tx.len, chunk + 1, chunks, @errorName(e), t.w.detail(),
             });
             return t.mapWire(e);
         };
@@ -331,7 +304,7 @@ pub const TcpColl = struct {
 
     fn close(ptr: *anyopaque) void {
         const t: *TcpColl = @ptrCast(@alignCast(ptr));
-        t.w.close(std.time.ns_per_s);
+        t.w.close(t.gpa);
         // the copy stream may still write tx (a begun or failed chunked gather's copies) or read rx: a bounded wait
         // for it before the buffers go, else they leak below
         const copy_idle = if (t.copy.synchronizeFor(2 * std.time.ns_per_s)) |_| true else |_| false;
@@ -500,9 +473,23 @@ pub fn handshake(fan: *const Fan, id: *const coll.Identity, extra: []const u8) !
 
 /// tcp_host over the session's data links (`port_offset` past the data port: the proxy keeps its own wire).
 pub fn openHost(gpa: std.mem.Allocator, d: *const gpu.Driver, rank: u32, se: Session, port_offset: u16) !*TcpColl {
+    var w: HostWire = .{ .tcp = try wire.Wire.open(@intCast(rank), se.addrs[0..se.links], se.settings.data_port + port_offset, se.epoch, se.settings.opt) };
+    errdefer w.close(gpa);
     const s = se.settings;
-    var w = try wire.Wire.open(@intCast(rank), se.addrs[0..se.links], s.data_port + port_offset, se.epoch, s.opt);
-    errdefer w.close(std.time.ns_per_s);
+    const t = try initHost(gpa, d, rank, s, w);
+    std.log.info("collectives: tcp_host over {d} data link(s) from port {d}, stripe >= {d} MiB, RTO floor {d} us, progress deadline {d} ms, GPU waits fail after {d} s (logged past {d} s), {s} staging, gathers >= {d} MiB pipelined in {d} MiB chunks", .{ se.links, s.data_port + port_offset, s.opt.stripe_min >> 20, s.opt.rto_min_us, s.opt.progress_ns / std.time.ns_per_ms, s.gpu_wait_ns / std.time.ns_per_s, s.gpu_warn_ns / std.time.ns_per_s, @tagName(s.staging), s.pipe_min >> 20, s.chunk >> 20 });
+    return t;
+}
+
+/// The eager/pipelined GPU staging path on its own QP. All payloads use verbs in this mode.
+pub fn openVerbsHost(gpa: std.mem.Allocator, d: *const gpu.Driver, rank: u32, se: Session, link: Link, device: []const u8, gid_index: u8) !*TcpColl {
+    const s = se.settings;
+    const v = try @import("verbs_wire.zig").Wire.open(gpa, link, device, gid_index, @intCast(rank), se.epoch, s.chunk, s.opt.progress_ns);
+    errdefer v.close(gpa);
+    return initHost(gpa, d, rank, s, .{ .verbs = v });
+}
+
+fn initHost(gpa: std.mem.Allocator, d: *const gpu.Driver, rank: u32, s: Settings, w: HostWire) !*TcpColl {
     const t = try gpa.create(TcpColl);
     errdefer gpa.destroy(t);
     var staged = try gpu.Event.init(d, false);
@@ -518,16 +505,16 @@ pub fn openHost(gpa: std.mem.Allocator, d: *const gpu.Driver, rank: u32, se: Ses
     errdefer for (ready[0..made]) |*e| e.deinit();
     while (made < ready.len) : (made += 1) ready[made] = try gpu.Event.init(d, false);
     t.* = .{ .gpa = gpa, .d = d, .rank = rank, .w = w, .staged = staged, .uploaded = uploaded, .gpu_wait_ns = s.gpu_wait_ns, .gpu_warn_ns = s.gpu_warn_ns, .staging = s.staging, .copy = copy, .start = start, .chunk_ready = ready, .pipe_min = s.pipe_min, .chunk = s.chunk };
-    std.log.info("collectives: tcp_host over {d} data link(s) from port {d}, stripe >= {d} MiB, RTO floor {d} us, progress deadline {d} ms, GPU waits fail after {d} s (logged past {d} s), {s} staging, gathers >= {d} MiB pipelined in {d} MiB chunks", .{ se.links, s.data_port + port_offset, s.opt.stripe_min >> 20, s.opt.rto_min_us, s.opt.progress_ns / std.time.ns_per_ms, s.gpu_wait_ns / std.time.ns_per_s, s.gpu_warn_ns / std.time.ns_per_s, @tagName(s.staging), s.pipe_min >> 20, s.chunk >> 20 });
     return t;
 }
 
-/// coll.Open for HIP builds: TF_COLL_KIND=host (default) or proxy (tcp_proxy.zig: capturable, needs the kit).
+/// HIP transport selection. The graph-capable proxies share the same staging and collect kernels.
 pub fn open(gpa: std.mem.Allocator, io: std.Io, ctx: *const gpu.Context, kit: ?*const coll.Kit, fan: *const Fan, id: *const coll.Identity) anyerror!coll.Coll {
     const kind = if (c.getenv("TF_COLL_KIND")) |v| std.mem.span(v) else "host";
-    if (std.mem.eql(u8, kind, "proxy")) {
+    const use_verbs = std.mem.eql(u8, kind, "verbs");
+    if (use_verbs or std.mem.eql(u8, kind, "proxy")) {
         const k = kit orelse return error.ProxyNeedsKit;
-        return @import("tcp_proxy.zig").open(gpa, io, ctx, k, fan, id);
+        return @import("tcp_proxy.zig").open(gpa, io, ctx, k, fan, id, use_verbs);
     }
     if (!std.mem.eql(u8, kind, "host")) return error.BadSetting;
     const se = try handshake(fan, id, "kind=host");

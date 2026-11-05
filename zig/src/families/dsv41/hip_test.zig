@@ -1,13 +1,10 @@
-//! The dsv41 family built for HIP (zig build test-dsv41-hip-host): a HIP rank's whole serving path is analyzed from its
-//! entry points (native.open, which builds the lane backend over every model primitive, its refusals and weight check),
-//! so anything it reaches must compile without CUDA, NCCL, verbs or the vision tower; then the tests of the files it
-//! uses run on the host (no GPU work).
+//! Compile and test the dsv41 HIP serving path without requiring a GPU.
 const std = @import("std");
 const gpu = @import("gpu");
 const native = @import("native.zig");
 const model = @import("model.zig");
 
-test "a HIP rank's serving path compiles without CUDA, NCCL, verbs RDMA or vision" {
+test "a HIP rank's serving path compiles without CUDA, NCCL, the CUDA RDMA ring or vision" {
     comptime std.debug.assert(gpu.backend == .hip and !gpu.features.vision and !gpu.features.verbs_rdma and !gpu.features.world4);
     _ = &native.open;
     _ = &native.explain;
@@ -32,6 +29,7 @@ test {
     _ = @import("tcp_wire.zig");
     _ = @import("tcp_coll.zig");
     _ = @import("tcp_proxy.zig");
+    _ = @import("verbs_wire.zig");
     _ = @import("fan.zig");
     _ = @import("config.zig");
     _ = @import("plan.zig");

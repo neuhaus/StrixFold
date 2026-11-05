@@ -139,7 +139,7 @@ class Q:
             "kit_manifest_sha256": sha_file(kit), "bundle_manifest_sha256": bsum, "bundle_pinned": self.cv["BUNDLE_SHA256"],
             "lock_json_sha256": sha_file(lock) if os.path.exists(lock) else None, "gpu_strict": self.cv.get("GPU_STRICT"),
             "drafts": self.cv.get("DRAFTS"), "graphs": self.cv.get("GRAPHS"), "context": self.cv.get("CONTEXT"),
-            "streams": self.cv.get("STREAMS"), "parallel": self.cv.get("PARALLEL"), "transport": self.cv.get("TRANSPORT"),
+            "streams": self.cv.get("STREAMS"), "parallel": self.cv.get("PARALLEL"), "transport": "verbs" if self.cv.get("COLL_KIND") == "verbs" else "tcp",
             "coll_kind": self.cv.get("COLL_KIND"), "modalities": self.cv.get("MODALITIES"),
         }
         good = ok1 and same and dep.get("clean") and bsum == self.cv["BUNDLE_SHA256"]
