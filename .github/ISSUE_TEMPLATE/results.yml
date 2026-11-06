@@ -1,0 +1,64 @@
+name: Results from your hardware
+description: Speed numbers from your own boxes, for docs/COMMUNITY-RESULTS.md
+title: "Results: <boxes>, <link>"
+labels: ["results"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for measuring. The commands are in [docs/COMMUNITY-RESULTS.md](https://github.com/Shoestring-dev/StrixFold/blob/main/docs/COMMUNITY-RESULTS.md). Paste the outputs as they print; we copy the numbers into the table with your name or handle unless you say otherwise.
+  - type: input
+    id: boxes
+    attributes:
+      label: Boxes
+      description: Brand and model of each box, and memory
+      placeholder: 2 x Bosgame M5, 128 GB
+    validations:
+      required: true
+  - type: input
+    id: link
+    attributes:
+      label: Link between them
+      description: USB4 cables (how many, MTU), or network cards and switch
+      placeholder: 2 x USB4 (thunderbolt_net), MTU 1500
+    validations:
+      required: true
+  - type: input
+    id: stack
+    attributes:
+      label: GPU stack and kernel
+      placeholder: ROCm 10.0.0-4, Linux 7.2.7
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: StrixFold commit
+      placeholder: git rev-parse --short HEAD
+    validations:
+      required: true
+  - type: textarea
+    id: settings
+    attributes:
+      label: Settings you served with
+      description: Anything you changed in serve.conf (DRAFTS, CONTEXT, STREAMS, power profile)
+      placeholder: serve.conf defaults (DRAFTS=1), balanced power
+    validations:
+      required: true
+  - type: textarea
+    id: bench
+    attributes:
+      label: serve-rank0.sh bench output
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: sweep
+    attributes:
+      label: ctx_sweep.py output (optional)
+      render: json
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: Cooling, power limits, what went wrong on the way

@@ -32,6 +32,11 @@ tools/dsv41-hip/zig_build.sh install                                   # CPU too
 tools/dsv41-hip/zig_build.sh test test-dsv41-hip-host native-hip dsv41-hip-gpu-test -Dhip-triton-kit=$HOME/tfp/tri/kit/gfx1151
 tools/dsv41-hip/run_gpu_tests.sh                                       # GPU smoke / ABI / glue tests, under the GPU lock
 ```
+The `dsv41-hip-gpu-test` step also builds the collectives test, `zig-out/native-hip/test/tf-dsv41-coll-check`.
+`coll_fault_matrix.sh` runs it through the link's fault cases (peer killed, stalled, mismatched, aborted, corrupted)
+with both ranks on one box over loopback:
+`COLL_CHECK=$PWD/zig-out/native-hip/test/tf-dsv41-coll-check flock -w 1800 /var/tmp/halo-gpu.lock tools/dsv41-hip/coll_fault_matrix.sh`.
+
 `zig_build.sh` runs `zig build` confined to cores 8-15/24-31 (800% CPU, 16 GiB) at low priority. The native build
 installs `zig-out/native-hip/{bin/tensorfold-native, bin/tf-dsv41-lanes, bin/tf-dsv41-layer, bin/tf-hip-kit,
 share/tensorfold/hip/gfx1151/dsv41}` (the AMD kit: HIP code objects plus the AOT Triton kit, every object by SHA-256
@@ -97,14 +102,15 @@ and every hash, `probe.json`).
 
 ### Settings that matter
 
-`serve.conf` ships the conservative first-run settings: one stream (`STREAMS=1`, `PARALLEL=1`), an 8,192-token context,
-drafts off (`DRAFTS=0`), HIP graphs on (`GRAPHS=1`, over `COLL_KIND=proxy`).
+`serve.conf` ships the first-run settings: one stream (`STREAMS=1`, `PARALLEL=1`), an 8,192-token context, drafts on
+(`DRAFTS=1`), HIP graphs on (`GRAPHS=1`, over `COLL_KIND=proxy`).
 
 - **Several chats at once:** `STREAMS` and `PARALLEL` up to 8 (the measured 1-8 chat results in
   [docs/RESULTS.md](../../docs/RESULTS.md)). Every stream shares the pool's `CONTEXT` positions.
 - **Longer context:** `CONTEXT` up to the RoPE tables' rows minus 49. With the default 65,536 rows that is 63,488
   tokens; longer windows need inputs prepared with more rows (the 1M-token runs in RESULTS did that).
-- **Drafts:** `DRAFTS=1` turns on DSpark drafting; it gives exactly the same text as drafts off.
+- **Drafts:** `DRAFTS=1` (the default) turns on DSpark drafting, which the published speeds need: on our pair the
+  `bench` code prompt writes 74.5 tok/s with it and about 33 without. It gives exactly the same text as `DRAFTS=0`.
 
 ### Opt-in USB4 verbs transport (experimental)
 

@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Setup help
+    url: https://discord.gg/D4FgAJnKd9
+    about: Questions about building or running StrixFold are fastest in #help-and-setup on the Discord.

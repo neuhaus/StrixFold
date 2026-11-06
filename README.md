@@ -27,9 +27,14 @@ machines it runs DeepSeek-V4.1-Flash at about 72% of the speed of two NVIDIA DGX
 | 2 × DGX Spark, same weights (reference) | ≈73 tok/s | 2,180 tok/s | |
 
 - One chat is 72.3% of two DGX Sparks; prompt reading is 70.8%.
+- Writing speeds are with drafting on, the shipped default (`DRAFTS=1` in `serve.conf`). With it off, one chat writes
+  about 32 tok/s. Drafting gives exactly the same text either way.
+- Writing speed holds at long context: from an empty prompt to 48K tokens of context it drops about 4%
+  ([Speed at long context](docs/RESULTS.md#speed-at-long-context)).
 - Quality matches the Spark build: MMLU-Pro 84.8%, HumanEval+ 92%.
 - Context windows from 16K up to 1M tokens.
 - How each number was measured, with the raw tables: [docs/RESULTS.md](docs/RESULTS.md).
+- Numbers from other people's boxes: [docs/COMMUNITY-RESULTS.md](docs/COMMUNITY-RESULTS.md). Add yours.
 
 ## Tested on
 
@@ -77,8 +82,9 @@ power settings) is in [docs/TUNING.md](docs/TUNING.md). Most of it applies to an
 ## Community
 
 Setup help, benchmarks, model recipes and two-box tuning are on the [StrixFold Discord](https://discord.gg/D4FgAJnKd9).
-Bug reports are welcome there or as GitHub issues. News and releases are also posted on X as
-[@Shoestring_Dev](https://x.com/Shoestring_Dev).
+Bug reports are welcome there or as GitHub issues. Measured StrixFold on your own boxes? Send the numbers with the
+**Results from your hardware** issue form and they go on [docs/COMMUNITY-RESULTS.md](docs/COMMUNITY-RESULTS.md).
+News and releases are also posted on X as [@Shoestring_Dev](https://x.com/Shoestring_Dev).
 
 ## Credits and licence
 

@@ -1,7 +1,7 @@
 # Changes in this fork
 
 This fork starts from Bertholomus AI's DeepSeek-V4.1 fork of TensorFold at commit 3ff3b2ac (18 Oct 2026). Every change
-below is ours, made between 18 and 22 October 2026 and released under Apache-2.0 as upstream. Upstream's LICENSE,
+below is ours, made between 18 October and 6 November 2026 and released under Apache-2.0 as upstream. Upstream's LICENSE,
 LICENSES/ and THIRD_PARTY_NOTICES.md are unchanged; NOTICE gains one section at its end.
 
 ## Added
@@ -20,6 +20,8 @@ LICENSES/ and THIRD_PARTY_NOTICES.md are unchanged; NOTICE gains one section at 
 | `tools/dsv41-hip/` input tools (prepare_inputs.py, inventory_checkpoint.py, input_common.py, snapshot_files.py, source_lock.json, assets/) | The CPU input preparation `prepare_inputs.sh` and `verify_inputs.sh` run, vendored unchanged from the component kit at def87879; the chat template is Tech2wild's (MIT, see NOTICE) |
 | `tools/dsv41-zig/inputs/`, `tools/dsv41-zig/kit/` | Token map and per-node input preparation, and kit packing |
 | `docs/RESULTS.md`, `docs/TUNING.md`, `docs/img/` | Measured results with charts, and the two-box tuning notes |
+| `tools/dsv41-hip/ctx_sweep.py` | Writing speed against context length, drafts on and off (RESULTS, Speed at long context) |
+| `docs/COMMUNITY-RESULTS.md`, `.github/ISSUE_TEMPLATE/` | Results from other people's hardware, and the issue form that collects them |
 | `README.md`, `CHANGES.md` | This fork's README and this file. Upstream's README moved to `docs/UPSTREAM-README.md`. |
 
 ## Modified upstream files
