@@ -1,0 +1,10 @@
+run 20261107-restored-after-send-write: rank 0 on fuzzy, rank 1 on misty
+both ranks: deploy a4e4814d4ac4, kit 5eb6ec6fcdc8, config 986caf05ded7
+GPU lock held on fuzzy (600230)
+GPU lock held on misty (2750617)
+rank 1 started (2750652): /home/sn/.local/state/strixfold-weights/serve-verbs/20261107-restored-after-send-write
+rank 0 started (600342): /home/sn/.local/state/strixfold-weights/serve-verbs/20261107-restored-after-send-write
+{"reply": "The capital of France is Paris.", "usage": {"prompt_tokens": 16, "completion_tokens": 8, "total_tokens": 24, "prompt_tokens_details": {"cached_tokens": 0}, "completion_tokens_details": {"reasoning_tokens": 0}}, "wall_s": 0.344, "completion_tok_per_s_wall": 23.24}
+ready: http://0.0.0.0:8000 (/home/sn/.local/state/strixfold-weights/serve-verbs/20261107-restored-after-send-write)
+rank 1 linked: {"rank": 1, "loaded_s": 34.1, "pool": 65487, "drafts": true, "arena_used": 3872593008, "arena_reserved": 4081057792, "replay_floor": false, "side": false, "engram_aio": false}
+ready: run 20261107-restored-after-send-write (/home/sn/.local/state/strixfold-weights/serve-verbs/20261107-restored-after-send-write/first_light.json)

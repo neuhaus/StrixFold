@@ -1,0 +1,50 @@
+info: rank cache: 95.1 GiB of expert entries read whole in 16.6 s
+libibverbs: Warning: couldn't load driver 'libmlx5-rdmav57.so': libmlx5-rdmav57.so: cannot open shared object file: No such file or directory
+libibverbs: Warning: couldn't load driver 'libmlx4-rdmav57.so': libmlx4-rdmav57.so: cannot open shared object file: No such file or directory
+libibverbs: Warning: couldn't load driver 'libmana-rdmav57.so': libmana-rdmav57.so: cannot open shared object file: No such file or directory
+libibverbs: Warning: couldn't load driver 'libhns-rdmav57.so': libhns-rdmav57.so: cannot open shared object file: No such file or directory
+libibverbs: Warning: couldn't load driver 'libefa-rdmav57.so': libefa-rdmav57.so: cannot open shared object file: No such file or directory
+info: collectives: RC verbs on usb4_rdma0 GID index 1, MTU 4096, registered host window 4456496 bytes
+info: collectives: RC verbs on usb4_rdma0 GID index 1, MTU 4096, registered host window 4194352 bytes
+info: collectives: RC verbs on usb4_rdma0 GID index 1, MTU 4096, registered host window 327488 bytes
+info: collectives: verbs proxy with 8 slots of 4352 KiB, CPU 6; oversized gathers use a separate verbs QP
+info: dsv41: w-tri's HIP kernels in place of Triton: hip (TF_DS_AUX)
+info: config.json declares a vision tower; not opened (text capability)
+[tensorfold] HIP gfx1151 device 0 (AMD Radeon 8060S Graphics, memory shared with the host): model 102.73 GiB; 1 stream at once, 0.00 GiB each at a 65487-token window, of 5.1 GiB left after a 12.5 GiB reserve; prompts in 2048-row chunks
+[tensorfold] serving dsv41 at http://127.0.0.1:18081/v1 (sampling: greedy; drafts: on; context: 63470; loaded in 37.1s)
+[tensorfold] 127.0.0.1 "GET /health HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /health HTTP/1.1" 200 -
+info: lanes: step 0 rank 0 prompt pass: 16 tokens, slot 0, extent at 0, 2048 rows; from 0: no kept state; 0 other stream(s) live; collectives (stream idle): staged 2, cable1 2, cable2 0, host 11
+[tensorfold] done chatcmpl-e658e826a9d472336123c8216e076d29 prompt=16 cached=0 thinking=False effort=none tokens=8 sha=6243895c315c finish=stop rounds=2 accepted=6/10
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /health HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/tokenize HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/tokenize HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/tokenize HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/tokenize HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/tokenize HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/tokenize HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/tokenize HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/tokenize HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+info: lanes: step 6 rank 0 prompt pass: 31 tokens, slot 0, extent at 0, 2048 rows; from 0: no kept state; 0 other stream(s) live; collectives (stream idle): staged 273, cable1 273, cable2 0, host 11
+[tensorfold] done chatcmpl-bbc49e729ec25bbcfe2cb5648437be8b prompt=31 cached=0 thinking=False effort=none tokens=128 sha=e5f895f8d2d5 finish=length rounds=27 accepted=100/131
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+info: lanes: step 62 rank 0 prompt pass: 2000 tokens, slot 0, extent at 0, 4096 rows; from 0: no kept state; 0 other stream(s) live; collectives (stream idle): staged 2890, cable1 2890, cable2 0, host 11
+[tensorfold] done chatcmpl-47d372f3ad10683ebc380a36dc37ce63 prompt=2000 cached=0 thinking=False effort=none tokens=256 sha=863e5f2ae169 finish=length rounds=67 accepted=188/264
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+info: lanes: step 198 rank 0 prompt pass: 63000 tokens, slot 0, extent at 0, 63488 rows; from 0: no kept state; 0 other stream(s) live; collectives (stream idle): staged 9228, cable1 9228, cable2 0, host 447
+[tensorfold] 127.0.0.1 "GET /health HTTP/1.1" 200 -
+[tensorfold] done chatcmpl-d09ea7d37f3ec0d23205ba6b0ff83693 prompt=63000 cached=0 thinking=False effort=none tokens=256 sha=8d5601666bda finish=length rounds=62 accepted=193/259
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+info: lanes: step 354 rank 0 prompt pass: 2000 tokens, slot 0, extent at 0, 4096 rows; from 0: no kept state; 0 other stream(s) live; collectives (stream idle): staged 15088, cable1 15088, cable2 0, host 13875
+[tensorfold] done chatcmpl-767f336eccd68080cbf1d27b06188352 prompt=2000 cached=0 thinking=False effort=none tokens=256 sha=863e5f2ae169 finish=length rounds=67 accepted=188/265
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+info: lanes: step 490 rank 0 prompt pass: 63000 tokens, slot 0, extent at 0, 63488 rows; from 0: no kept state; 0 other stream(s) live; collectives (stream idle): staged 21425, cable1 21425, cable2 0, host 14311
+[tensorfold] done chatcmpl-b7df14e2ebb444cab3831a0aa96a6711 prompt=63000 cached=0 thinking=False effort=none tokens=256 sha=8d5601666bda finish=length rounds=62 accepted=193/256
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+info: lanes: step 646 rank 0 prompt pass: 2000 tokens, slot 0, extent at 0, 4096 rows; from 0: no kept state; 0 other stream(s) live; collectives (stream idle): staged 27285, cable1 27285, cable2 0, host 27739
+[tensorfold] done chatcmpl-27944547186dc36a9042659e67cc1839 prompt=2000 cached=0 thinking=False effort=none tokens=256 sha=863e5f2ae169 finish=length rounds=67 accepted=188/265
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+info: lanes: step 782 rank 0 prompt pass: 63000 tokens, slot 0, extent at 0, 63488 rows; from 0: no kept state; 0 other stream(s) live; collectives (stream idle): staged 33622, cable1 33622, cable2 0, host 28175
+[tensorfold] done chatcmpl-367915c826f1594864eb33d19a9382ad prompt=63000 cached=0 thinking=False effort=none tokens=256 sha=8d5601666bda finish=length rounds=62 accepted=193/256

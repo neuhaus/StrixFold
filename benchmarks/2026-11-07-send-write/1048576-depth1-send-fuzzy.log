@@ -1,0 +1,21 @@
+libibverbs: Warning: couldn't load driver 'libmlx5-rdmav57.so': libmlx5-rdmav57.so: cannot open shared object file: No such file or directory
+libibverbs: Warning: couldn't load driver 'libmlx4-rdmav57.so': libmlx4-rdmav57.so: cannot open shared object file: No such file or directory
+libibverbs: Warning: couldn't load driver 'libmana-rdmav57.so': libmana-rdmav57.so: cannot open shared object file: No such file or directory
+libibverbs: Warning: couldn't load driver 'libhns-rdmav57.so': libhns-rdmav57.so: cannot open shared object file: No such file or directory
+libibverbs: Warning: couldn't load driver 'libefa-rdmav57.so': libefa-rdmav57.so: cannot open shared object file: No such file or directory
+LISTEN port=19760
+BOOTSTRAP round=0 qpn=2349 peer_qpn=2349 tcp_bytes=200 then_closed=1
+RESULT round=0 rank=0 op=SEND bytes=1048576 iterations=16 depth=1 persistent_rq=0 late_receives=0 spin_us=5000 profiled=0 us_per_message=1416.334
+PHASE round=0 rank=0 op=SEND bytes=1048576 rq_post_us=0.043 gpu_submit_us=514.283 tx_release_us=8.830 ready_us=3.253 wr_post_us=17.251 cq_wait_us=756.598 rx_release_us=72.227 verify_us=43.850
+VERIFY PASS round=0 rank=0 payload_bytes=16777216 guard_bytes_per_message=64 tcp_data_calls=0
+LISTEN port=19761
+BOOTSTRAP round=1 qpn=2350 peer_qpn=2350 tcp_bytes=200 then_closed=1
+RESULT round=1 rank=0 op=SEND bytes=1048576 iterations=16 depth=1 persistent_rq=0 late_receives=0 spin_us=5000 profiled=0 us_per_message=868.456
+PHASE round=1 rank=0 op=SEND bytes=1048576 rq_post_us=0.041 gpu_submit_us=153.337 tx_release_us=9.337 ready_us=3.128 wr_post_us=5.468 cq_wait_us=594.217 rx_release_us=68.080 verify_us=34.847
+VERIFY PASS round=1 rank=0 payload_bytes=16777216 guard_bytes_per_message=64 tcp_data_calls=0
+LISTEN port=19762
+BOOTSTRAP round=2 qpn=2351 peer_qpn=2351 tcp_bytes=200 then_closed=1
+RESULT round=2 rank=0 op=SEND bytes=1048576 iterations=16 depth=1 persistent_rq=0 late_receives=0 spin_us=5000 profiled=0 us_per_message=1007.174
+PHASE round=2 rank=0 op=SEND bytes=1048576 rq_post_us=0.061 gpu_submit_us=209.040 tx_release_us=10.231 ready_us=5.494 wr_post_us=9.968 cq_wait_us=665.420 rx_release_us=64.849 verify_us=42.112
+VERIFY PASS round=2 rank=0 payload_bytes=16777216 guard_bytes_per_message=64 tcp_data_calls=0
+PASS rounds=3 MR_and_QP_recreation=1

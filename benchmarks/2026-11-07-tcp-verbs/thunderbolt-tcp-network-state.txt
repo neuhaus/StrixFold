@@ -1,0 +1,28 @@
+fuzzy
+thunderbolt_net        57344  0
+thunderbolt           647168  1 thunderbolt_net
+lo               UNKNOWN        127.0.0.1/8
+eno1             UP             192.168.211.2/24
+tbv0             UNKNOWN        192.168.240.1/24
+wg0              UNKNOWN        192.168.230.1/24
+thunderbolt0     UP             192.168.220.1/24 192.168.242.1/30
+thunderbolt1     UP             192.168.221.1/24 192.168.241.1/30
+7: thunderbolt0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9000 qdisc fq_codel state UP mode DEFAULT group default qlen 1000
+    link/ether 02:37:c4:03:55:a0 brd ff:ff:ff:ff:ff:ff
+    RX:    bytes packets errors dropped  missed   mcast
+    120858562353 2997428     12       0      12       0
+    TX:    bytes packets errors dropped carrier collsns
+    120855792047 2940200      0      12       0       0
+    altname enx0237c40355a0
+8: thunderbolt1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9000 qdisc fq_codel state UP mode DEFAULT group default qlen 1000
+    link/ether 02:6c:5b:e1:5b:2b brd ff:ff:ff:ff:ff:ff
+    RX:    bytes packets errors dropped  missed   mcast
+    123996362285 2822143     46       0      39       0
+    TX:    bytes packets errors dropped carrier collsns
+    123996481854 2791066      0      12       0       0
+    altname enx026c5be15b2b
+State Recv-Q Send-Q Local Address:Port   Peer Address:Port
+ESTAB 0      656572 192.168.241.1:29636 192.168.241.2:33096
+	 cubic wscale:10,10 rto:10 rtt:1.091/0.44 ato:7 mss:8948 pmtu:9000 rcvmss:8948 advmss:8948 cwnd:398 ssthresh:300 bytes_sent:119665304396 bytes_retrans:1326636 bytes_acked:119663321188 bytes_received:119663977760 segs_out:14104630 segs_in:2668456 data_segs_out:13408448 data_segs_in:1940835 send 26114053162bps lastsnd:1 pacing_rate 31333273816bps delivery_rate 10364230208bps delivered:13408298 app_limited busy:133270ms rwnd_limited:5ms(0.0%) unacked:74 retrans:0/152 dsack_dups:75 reordering:92 reord_seen:180 rcv_rtt:1 rcv_space:3640196 rcv_ssthresh:11380564 minrtt:0.074 rcv_ooopack:737 snd_wnd:15990784 rcv_wnd:10770432 rehash:2
+ESTAB 563724 0      192.168.242.1:29637 192.168.242.2:44264
+	 cubic wscale:10,10 rto:10 rtt:1.618/0.589 ato:7 mss:8948 pmtu:9000 rcvmss:8948 advmss:8948 cwnd:422 ssthresh:415 bytes_sent:116519631144 bytes_retrans:96216 bytes_acked:116519534928 bytes_received:116520098652 segs_out:13959114 segs_in:2848483 data_segs_out:13056258 data_segs_in:1889615 send 18670239802bps lastsnd:2 pacing_rate 22404287760bps delivery_rate 13994916904bps delivered:13056259 busy:129816ms rwnd_limited:6ms(0.0%) retrans:0/12 dsack_dups:12 reordering:22 reord_seen:18 rcv_rtt:1 rcv_space:6246860 rcv_ssthresh:16589198 minrtt:0.077 rcv_ooopack:158 snd_wnd:8933376 rcv_wnd:15961088

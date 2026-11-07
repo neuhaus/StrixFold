@@ -1,0 +1,21 @@
+libibverbs: Warning: couldn't load driver 'libmlx5-rdmav57.so': libmlx5-rdmav57.so: cannot open shared object file: No such file or directory
+libibverbs: Warning: couldn't load driver 'libmlx4-rdmav57.so': libmlx4-rdmav57.so: cannot open shared object file: No such file or directory
+libibverbs: Warning: couldn't load driver 'libmana-rdmav57.so': libmana-rdmav57.so: cannot open shared object file: No such file or directory
+libibverbs: Warning: couldn't load driver 'libhns-rdmav57.so': libhns-rdmav57.so: cannot open shared object file: No such file or directory
+libibverbs: Warning: couldn't load driver 'libefa-rdmav57.so': libefa-rdmav57.so: cannot open shared object file: No such file or directory
+LISTEN port=19760
+BOOTSTRAP round=0 qpn=2343 peer_qpn=2343 tcp_bytes=200 then_closed=1
+RESULT round=0 rank=0 op=WRITE_IMM bytes=65536 iterations=128 depth=1 persistent_rq=1 late_receives=0 spin_us=5000 profiled=0 us_per_message=296.846
+PHASE round=0 rank=0 op=WRITE_IMM bytes=65536 rq_post_us=0.032 gpu_submit_us=78.740 tx_release_us=7.214 ready_us=40.250 wr_post_us=2.075 cq_wait_us=96.306 rx_release_us=48.820 verify_us=23.408
+VERIFY PASS round=0 rank=0 payload_bytes=8388608 guard_bytes_per_message=64 tcp_data_calls=0
+LISTEN port=19761
+BOOTSTRAP round=1 qpn=2344 peer_qpn=2344 tcp_bytes=200 then_closed=1
+RESULT round=1 rank=0 op=WRITE_IMM bytes=65536 iterations=128 depth=1 persistent_rq=1 late_receives=0 spin_us=5000 profiled=0 us_per_message=268.570
+PHASE round=1 rank=0 op=WRITE_IMM bytes=65536 rq_post_us=0.031 gpu_submit_us=42.517 tx_release_us=7.503 ready_us=39.417 wr_post_us=2.309 cq_wait_us=106.554 rx_release_us=47.566 verify_us=22.673
+VERIFY PASS round=1 rank=0 payload_bytes=8388608 guard_bytes_per_message=64 tcp_data_calls=0
+LISTEN port=19762
+BOOTSTRAP round=2 qpn=2345 peer_qpn=2345 tcp_bytes=200 then_closed=1
+RESULT round=2 rank=0 op=WRITE_IMM bytes=65536 iterations=128 depth=1 persistent_rq=1 late_receives=0 spin_us=5000 profiled=0 us_per_message=261.747
+PHASE round=2 rank=0 op=WRITE_IMM bytes=65536 rq_post_us=0.030 gpu_submit_us=42.820 tx_release_us=7.462 ready_us=38.999 wr_post_us=1.989 cq_wait_us=99.156 rx_release_us=47.634 verify_us=23.657
+VERIFY PASS round=2 rank=0 payload_bytes=8388608 guard_bytes_per_message=64 tcp_data_calls=0
+PASS rounds=3 MR_and_QP_recreation=1

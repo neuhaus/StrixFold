@@ -1,0 +1,422 @@
+[
+  {
+    "status": 200,
+    "error": null,
+    "finish": "length",
+    "prompt_tokens": 2000,
+    "completion_tokens": 256,
+    "cached_tokens": 0,
+    "prompt_ids_sha256": "58bec9cd569a275c7a9aa23fbdd4fd6a6d5a08c3e9c9fd204e64a199e4f318b3",
+    "prompt_ids_match_usage": true,
+    "request_tok_s": 45.565841973460245,
+    "committed_ids": 256,
+    "events": 68,
+    "t_end": 5.6182,
+    "t_first": 1.466,
+    "t_last": 5.6178,
+    "server_tok_s": 61.4154408265903,
+    "server_prefill_s": 1.46324983,
+    "speculative": {
+      "rounds": 67,
+      "drafted": 261,
+      "accepted": 188,
+      "acceptance_rate": 0.7203065134099617,
+      "tokens_per_round": 3.8208955223880596,
+      "proposer": {
+        "rounds_by_rows": {
+          "2": [
+            3,
+            127.683,
+            5435.752
+          ],
+          "3": [
+            15,
+            719.363,
+            34545.431
+          ],
+          "4": [
+            5,
+            259.632,
+            13497.077
+          ],
+          "5": [
+            7,
+            395.602,
+            22371.18
+          ],
+          "6": [
+            37,
+            2277.206,
+            140367.761
+          ]
+        },
+        "draft_ms": [
+          67,
+          375.727,
+          2119.668
+        ],
+        "drafted": 261,
+        "accepted": 188,
+        "committed": 255,
+        "first_rejected": 10,
+        "full_accepted": 35,
+        "eos_drafted": 0,
+        "budget_reached": 1,
+        "graphs": {
+          "captured": 30,
+          "replayed": 171,
+          "eager": 0
+        }
+      }
+    },
+    "text_head": "# LRU Cache Implementation\n\nHere's a clean, O(1) LRU cache using a doubly-linked list + hash map (the classic approach).",
+    "creator_tok_s": 61.41203183475659,
+    "first_event_tokens": 1,
+    "first_event_tokens_estimated": true,
+    "burst_tok_s": 61.418117984962855,
+    "ttft_s": 1.466,
+    "transport": "verbs",
+    "draft": true,
+    "rep": 0
+  },
+  {
+    "status": 200,
+    "error": null,
+    "finish": "length",
+    "prompt_tokens": 2000,
+    "completion_tokens": 256,
+    "cached_tokens": 0,
+    "prompt_ids_sha256": "58bec9cd569a275c7a9aa23fbdd4fd6a6d5a08c3e9c9fd204e64a199e4f318b3",
+    "prompt_ids_match_usage": true,
+    "request_tok_s": 23.607714241403237,
+    "committed_ids": 256,
+    "events": 249,
+    "t_end": 10.8439,
+    "t_first": 1.5058,
+    "t_last": 10.8433,
+    "server_tok_s": 27.308510066174904,
+    "server_prefill_s": 1.498990892,
+    "speculative": {
+      "rounds": 255,
+      "drafted": 0,
+      "accepted": 0,
+      "acceptance_rate": 0.0,
+      "tokens_per_round": 1.003921568627451,
+      "proposer": {
+        "rounds_by_rows": {
+          "1": [
+            255,
+            9336.92,
+            342586.463
+          ]
+        },
+        "draft_ms": [
+          0,
+          0.0,
+          0.0
+        ],
+        "drafted": 0,
+        "accepted": 0,
+        "committed": 255,
+        "first_rejected": 0,
+        "full_accepted": 0,
+        "eos_drafted": 0,
+        "budget_reached": 1,
+        "graphs": {
+          "captured": 6,
+          "replayed": 759,
+          "eager": 0
+        }
+      }
+    },
+    "text_head": "# LRU Cache Implementation\n\nHere's a clean, O(1) LRU cache using a doubly-linked list + hash map (the classic approach).",
+    "creator_tok_s": 27.30739424043315,
+    "first_event_tokens": 1,
+    "first_event_tokens_estimated": true,
+    "burst_tok_s": 27.309115024106184,
+    "ttft_s": 1.5058,
+    "transport": "verbs",
+    "draft": false,
+    "rep": 0
+  },
+  {
+    "status": 200,
+    "error": null,
+    "finish": "length",
+    "prompt_tokens": 2000,
+    "completion_tokens": 256,
+    "cached_tokens": 0,
+    "prompt_ids_sha256": "58bec9cd569a275c7a9aa23fbdd4fd6a6d5a08c3e9c9fd204e64a199e4f318b3",
+    "prompt_ids_match_usage": true,
+    "request_tok_s": 38.684820667152835,
+    "committed_ids": 256,
+    "events": 68,
+    "t_end": 6.6176,
+    "t_first": 2.0119,
+    "t_last": 6.6173,
+    "server_tok_s": 55.36721319592874,
+    "server_prefill_s": 2.008329365,
+    "speculative": {
+      "rounds": 67,
+      "drafted": 265,
+      "accepted": 188,
+      "acceptance_rate": 0.7094339622641509,
+      "tokens_per_round": 3.8208955223880596,
+      "proposer": {
+        "rounds_by_rows": {
+          "2": [
+            3,
+            140.247,
+            6557.281
+          ],
+          "3": [
+            13,
+            672.002,
+            34761.018
+          ],
+          "4": [
+            6,
+            354.209,
+            21108.335
+          ],
+          "5": [
+            7,
+            434.929,
+            27056.176
+          ],
+          "6": [
+            38,
+            2594.172,
+            177373.897
+          ]
+        },
+        "draft_ms": [
+          67,
+          411.419,
+          2541.533
+        ],
+        "drafted": 265,
+        "accepted": 188,
+        "committed": 255,
+        "first_rejected": 10,
+        "full_accepted": 34,
+        "eos_drafted": 0,
+        "budget_reached": 1,
+        "graphs": {
+          "captured": 0,
+          "replayed": 201,
+          "eager": 0
+        }
+      }
+    },
+    "text_head": "# LRU Cache Implementation\n\nHere's a clean, O(1) LRU cache using a doubly-linked list + hash map (the classic approach).",
+    "creator_tok_s": 55.36610065986929,
+    "first_event_tokens": 1,
+    "first_event_tokens_estimated": true,
+    "burst_tok_s": 55.36972215021207,
+    "ttft_s": 2.0119,
+    "transport": "verbs",
+    "draft": true,
+    "rep": 1
+  },
+  {
+    "status": 200,
+    "error": null,
+    "finish": "length",
+    "prompt_tokens": 2000,
+    "completion_tokens": 256,
+    "cached_tokens": 0,
+    "prompt_ids_sha256": "58bec9cd569a275c7a9aa23fbdd4fd6a6d5a08c3e9c9fd204e64a199e4f318b3",
+    "prompt_ids_match_usage": true,
+    "request_tok_s": 23.44785905490908,
+    "committed_ids": 256,
+    "events": 249,
+    "t_end": 10.9178,
+    "t_first": 1.5364,
+    "t_last": 10.9176,
+    "server_tok_s": 27.18126488045541,
+    "server_prefill_s": 1.52938658,
+    "speculative": {
+      "rounds": 255,
+      "drafted": 0,
+      "accepted": 0,
+      "acceptance_rate": 0.0,
+      "tokens_per_round": 1.003921568627451,
+      "proposer": {
+        "rounds_by_rows": {
+          "1": [
+            255,
+            9380.667,
+            345571.231
+          ]
+        },
+        "draft_ms": [
+          0,
+          0.0,
+          0.0
+        ],
+        "drafted": 0,
+        "accepted": 0,
+        "committed": 255,
+        "first_rejected": 0,
+        "full_accepted": 0,
+        "eos_drafted": 0,
+        "budget_reached": 1,
+        "graphs": {
+          "captured": 0,
+          "replayed": 765,
+          "eager": 0
+        }
+      }
+    },
+    "text_head": "# LRU Cache Implementation\n\nHere's a clean, O(1) LRU cache using a doubly-linked list + hash map (the classic approach).",
+    "creator_tok_s": 27.181288667653696,
+    "first_event_tokens": 1,
+    "first_event_tokens_estimated": true,
+    "burst_tok_s": 27.182013196530374,
+    "ttft_s": 1.5364,
+    "transport": "verbs",
+    "draft": false,
+    "rep": 1
+  },
+  {
+    "status": 200,
+    "error": null,
+    "finish": "length",
+    "prompt_tokens": 2000,
+    "completion_tokens": 256,
+    "cached_tokens": 0,
+    "prompt_ids_sha256": "58bec9cd569a275c7a9aa23fbdd4fd6a6d5a08c3e9c9fd204e64a199e4f318b3",
+    "prompt_ids_match_usage": true,
+    "request_tok_s": 41.95192487730257,
+    "committed_ids": 256,
+    "events": 68,
+    "t_end": 6.1022,
+    "t_first": 1.5144,
+    "t_last": 6.1019,
+    "server_tok_s": 55.58217948007355,
+    "server_prefill_s": 1.510492898,
+    "speculative": {
+      "rounds": 67,
+      "drafted": 265,
+      "accepted": 188,
+      "acceptance_rate": 0.7094339622641509,
+      "tokens_per_round": 3.8208955223880596,
+      "proposer": {
+        "rounds_by_rows": {
+          "2": [
+            3,
+            138.306,
+            6377.851
+          ],
+          "3": [
+            13,
+            677.791,
+            35355.996
+          ],
+          "4": [
+            6,
+            338.132,
+            19077.083
+          ],
+          "5": [
+            7,
+            435.285,
+            27093.224
+          ],
+          "6": [
+            38,
+            2583.336,
+            175826.342
+          ]
+        },
+        "draft_ms": [
+          67,
+          414.879,
+          2580.244
+        ],
+        "drafted": 265,
+        "accepted": 188,
+        "committed": 255,
+        "first_rejected": 10,
+        "full_accepted": 34,
+        "eos_drafted": 0,
+        "budget_reached": 1,
+        "graphs": {
+          "captured": 0,
+          "replayed": 201,
+          "eager": 0
+        }
+      }
+    },
+    "text_head": "# LRU Cache Implementation\n\nHere's a clean, O(1) LRU cache using a doubly-linked list + hash map (the classic approach).",
+    "creator_tok_s": 55.581978125933965,
+    "first_event_tokens": 1,
+    "first_event_tokens_estimated": true,
+    "burst_tok_s": 55.58549355143964,
+    "ttft_s": 1.5144,
+    "transport": "verbs",
+    "draft": true,
+    "rep": 2
+  },
+  {
+    "status": 200,
+    "error": null,
+    "finish": "length",
+    "prompt_tokens": 2000,
+    "completion_tokens": 256,
+    "cached_tokens": 0,
+    "prompt_ids_sha256": "58bec9cd569a275c7a9aa23fbdd4fd6a6d5a08c3e9c9fd204e64a199e4f318b3",
+    "prompt_ids_match_usage": true,
+    "request_tok_s": 23.3010749262391,
+    "committed_ids": 256,
+    "events": 249,
+    "t_end": 10.9866,
+    "t_first": 1.5311,
+    "t_last": 10.9862,
+    "server_tok_s": 26.967545835896377,
+    "server_prefill_s": 1.524942964,
+    "speculative": {
+      "rounds": 255,
+      "drafted": 0,
+      "accepted": 0,
+      "acceptance_rate": 0.0,
+      "tokens_per_round": 1.003921568627451,
+      "proposer": {
+        "rounds_by_rows": {
+          "1": [
+            255,
+            9454.927,
+            351351.11
+          ]
+        },
+        "draft_ms": [
+          0,
+          0.0,
+          0.0
+        ],
+        "drafted": 0,
+        "accepted": 0,
+        "committed": 255,
+        "first_rejected": 0,
+        "full_accepted": 0,
+        "eos_drafted": 0,
+        "budget_reached": 1,
+        "graphs": {
+          "captured": 0,
+          "replayed": 765,
+          "eager": 0
+        }
+      }
+    },
+    "text_head": "# LRU Cache Implementation\n\nHere's a clean, O(1) LRU cache using a doubly-linked list + hash map (the classic approach).",
+    "creator_tok_s": 26.968336506575074,
+    "first_event_tokens": 1,
+    "first_event_tokens_estimated": true,
+    "burst_tok_s": 26.96939633121108,
+    "ttft_s": 1.5311,
+    "transport": "verbs",
+    "draft": false,
+    "rep": 2
+  }
+]

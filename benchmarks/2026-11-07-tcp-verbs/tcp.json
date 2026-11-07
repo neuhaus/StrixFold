@@ -1,0 +1,164 @@
+[
+  {
+    "prompt_tokens": 2000,
+    "completion_tokens": 256,
+    "events": 65,
+    "ttft_s": 6.8187,
+    "total_s": 13.003,
+    "decode_tok_per_s": 41.23,
+    "decode_events_per_s": 10.35,
+    "prefill_tok_per_s": 293.3,
+    "reply": "# LRU Cache Implementation\n\nHere's a clean, O(1) LRU cache using a doubly-linked list + hash map (the classic approach). Python's `OrderedDict` would also work, but implementing the linked list explicitly demonstrates the underlying mechanics.\n\n```python\nfrom __future__ import annotations\nfrom typing import Dict, Generic, Optional, TypeVar\n\nK = TypeVar(\"K\")\nV = TypeVar(\"V\")\n\n\nclass _Node(Generic[K, V]):\n    \"\"\"Doubly-linked list node.\"\"\"\n    __slots__ = (\"key\", \"value\", \"prev\", \"next\")\n\n    def __init__(self, key: K, value: V) -> None:\n        self.key: K = key\n        self.value: V = value\n        self.prev: Optional[_Node[K, V]] = None\n        self.next: Optional[_Node[K, V]] = None\n\n\nclass LRUCache(Generic[K, V]):\n    \"\"\"\n    Least-Recently-Used cache with O(1) get and put.\n\n    Internals:\n      - `_map`: key -> node, for O(1) lookup.\n      - Doubly-linked list ordered from most-recent (head) to least",
+    "usage": {
+      "prompt_tokens": 2000,
+      "completion_tokens": 256,
+      "total_tokens": 2256,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0
+      }
+    },
+    "transport": "tcp",
+    "case": "prompt_2000",
+    "rep": 0,
+    "reply_sha256": "d11c619912eab8c5f86ab000a459a235b0865bcc174b5a157165d491cfa21792",
+    "prompt_sha256": "5c1ebb964bfe0574115635d3de6a5f0d7e4aebdab6d27046ec715113a4db69bc"
+  },
+  {
+    "prompt_tokens": 63000,
+    "completion_tokens": 256,
+    "events": 63,
+    "ttft_s": 201.2367,
+    "total_s": 207.374,
+    "decode_tok_per_s": 41.55,
+    "decode_events_per_s": 10.1,
+    "prefill_tok_per_s": 313.1,
+    "reply": "# LRU Cache Implementation\n\nHere's a clean, O(1) LRU cache using a doubly-linked list combined with a hash map:\n\n```python\nfrom typing import Dict, Optional, Generic, TypeVar\n\nK = TypeVar(\"K\")\nV = TypeVar(\"V\")\n\n\nclass _Node(Generic[K, V]):\n    \"\"\"Doubly-linked list node.\"\"\"\n    __slots__ = (\"key\", \"value\", \"prev\", \"next\")\n\n    def __init__(self, key: K, value: V) -> None:\n        self.key: K = key\n        self.value: V = value\n        self.prev: Optional[\"_Node[K, V]\"] = None\n        self.next: Optional[\"_Node[K, V]\"] = None\n\n\nclass LRUCache(Generic[K, V]):\n    \"\"\"\n    Least-Recently-Used cache with O(1) get and put.\n\n    Internally uses a hash map (dict) for O(1) lookup and a doubly-linked\n    list to track recency. The head of the list is the most-recently used\n    item; the tail is the least-recently used (eviction candidate).\n    \"\"\"\n\n    def __init",
+    "usage": {
+      "prompt_tokens": 63000,
+      "completion_tokens": 256,
+      "total_tokens": 63256,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0
+      }
+    },
+    "transport": "tcp",
+    "case": "prompt_63000",
+    "rep": 0,
+    "reply_sha256": "71f8043515bc9004a095544f41ba276022602781d93f695e9ee94a285e83644b",
+    "prompt_sha256": "fa7df9eff5cada97fdc95436d3b6d18de5515df52d72ddddd876f947bd29ffac"
+  },
+  {
+    "prompt_tokens": 2000,
+    "completion_tokens": 256,
+    "events": 65,
+    "ttft_s": 6.8925,
+    "total_s": 13.02,
+    "decode_tok_per_s": 41.62,
+    "decode_events_per_s": 10.45,
+    "prefill_tok_per_s": 290.2,
+    "reply": "# LRU Cache Implementation\n\nHere's a clean, O(1) LRU cache using a doubly-linked list + hash map (the classic approach). Python's `OrderedDict` would also work, but implementing the linked list explicitly demonstrates the underlying mechanics.\n\n```python\nfrom __future__ import annotations\nfrom typing import Dict, Generic, Optional, TypeVar\n\nK = TypeVar(\"K\")\nV = TypeVar(\"V\")\n\n\nclass _Node(Generic[K, V]):\n    \"\"\"Doubly-linked list node.\"\"\"\n    __slots__ = (\"key\", \"value\", \"prev\", \"next\")\n\n    def __init__(self, key: K, value: V) -> None:\n        self.key: K = key\n        self.value: V = value\n        self.prev: Optional[_Node[K, V]] = None\n        self.next: Optional[_Node[K, V]] = None\n\n\nclass LRUCache(Generic[K, V]):\n    \"\"\"\n    Least-Recently-Used cache with O(1) get and put.\n\n    Internals:\n      - `_map`: key -> node, for O(1) lookup.\n      - Doubly-linked list ordered from most-recent (head) to least",
+    "usage": {
+      "prompt_tokens": 2000,
+      "completion_tokens": 256,
+      "total_tokens": 2256,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0
+      }
+    },
+    "transport": "tcp",
+    "case": "prompt_2000",
+    "rep": 1,
+    "reply_sha256": "d11c619912eab8c5f86ab000a459a235b0865bcc174b5a157165d491cfa21792",
+    "prompt_sha256": "5c1ebb964bfe0574115635d3de6a5f0d7e4aebdab6d27046ec715113a4db69bc"
+  },
+  {
+    "prompt_tokens": 63000,
+    "completion_tokens": 256,
+    "events": 62,
+    "ttft_s": 200.7627,
+    "total_s": 206.772,
+    "decode_tok_per_s": 42.44,
+    "decode_events_per_s": 10.15,
+    "prefill_tok_per_s": 313.8,
+    "reply": "# LRU Cache Implementation\n\nHere's a clean, O(1) LRU cache using a doubly-linked list combined with a hash map:\n\n```python\nfrom typing import Dict, Optional, Generic, TypeVar\n\nK = TypeVar(\"K\")\nV = TypeVar(\"V\")\n\n\nclass _Node(Generic[K, V]):\n    \"\"\"Doubly-linked list node.\"\"\"\n    __slots__ = (\"key\", \"value\", \"prev\", \"next\")\n\n    def __init__(self, key: K, value: V) -> None:\n        self.key: K = key\n        self.value: V = value\n        self.prev: Optional[\"_Node[K, V]\"] = None\n        self.next: Optional[\"_Node[K, V]\"] = None\n\n\nclass LRUCache(Generic[K, V]):\n    \"\"\"\n    Least-Recently-Used cache with O(1) get and put.\n\n    Internally uses a hash map (dict) for O(1) lookup and a doubly-linked\n    list to track recency. The head of the list is the most-recently used\n    item; the tail is the least-recently used (eviction candidate).\n    \"\"\"\n\n    def __init",
+    "usage": {
+      "prompt_tokens": 63000,
+      "completion_tokens": 256,
+      "total_tokens": 63256,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0
+      }
+    },
+    "transport": "tcp",
+    "case": "prompt_63000",
+    "rep": 1,
+    "reply_sha256": "71f8043515bc9004a095544f41ba276022602781d93f695e9ee94a285e83644b",
+    "prompt_sha256": "fa7df9eff5cada97fdc95436d3b6d18de5515df52d72ddddd876f947bd29ffac"
+  },
+  {
+    "prompt_tokens": 2000,
+    "completion_tokens": 256,
+    "events": 65,
+    "ttft_s": 6.8829,
+    "total_s": 13.008,
+    "decode_tok_per_s": 41.63,
+    "decode_events_per_s": 10.45,
+    "prefill_tok_per_s": 290.6,
+    "reply": "# LRU Cache Implementation\n\nHere's a clean, O(1) LRU cache using a doubly-linked list + hash map (the classic approach). Python's `OrderedDict` would also work, but implementing the linked list explicitly demonstrates the underlying mechanics.\n\n```python\nfrom __future__ import annotations\nfrom typing import Dict, Generic, Optional, TypeVar\n\nK = TypeVar(\"K\")\nV = TypeVar(\"V\")\n\n\nclass _Node(Generic[K, V]):\n    \"\"\"Doubly-linked list node.\"\"\"\n    __slots__ = (\"key\", \"value\", \"prev\", \"next\")\n\n    def __init__(self, key: K, value: V) -> None:\n        self.key: K = key\n        self.value: V = value\n        self.prev: Optional[_Node[K, V]] = None\n        self.next: Optional[_Node[K, V]] = None\n\n\nclass LRUCache(Generic[K, V]):\n    \"\"\"\n    Least-Recently-Used cache with O(1) get and put.\n\n    Internals:\n      - `_map`: key -> node, for O(1) lookup.\n      - Doubly-linked list ordered from most-recent (head) to least",
+    "usage": {
+      "prompt_tokens": 2000,
+      "completion_tokens": 256,
+      "total_tokens": 2256,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0
+      }
+    },
+    "transport": "tcp",
+    "case": "prompt_2000",
+    "rep": 2,
+    "reply_sha256": "d11c619912eab8c5f86ab000a459a235b0865bcc174b5a157165d491cfa21792",
+    "prompt_sha256": "5c1ebb964bfe0574115635d3de6a5f0d7e4aebdab6d27046ec715113a4db69bc"
+  },
+  {
+    "prompt_tokens": 63000,
+    "completion_tokens": 256,
+    "events": 62,
+    "ttft_s": 199.9994,
+    "total_s": 206.01,
+    "decode_tok_per_s": 42.43,
+    "decode_events_per_s": 10.15,
+    "prefill_tok_per_s": 315.0,
+    "reply": "# LRU Cache Implementation\n\nHere's a clean, O(1) LRU cache using a doubly-linked list combined with a hash map:\n\n```python\nfrom typing import Dict, Optional, Generic, TypeVar\n\nK = TypeVar(\"K\")\nV = TypeVar(\"V\")\n\n\nclass _Node(Generic[K, V]):\n    \"\"\"Doubly-linked list node.\"\"\"\n    __slots__ = (\"key\", \"value\", \"prev\", \"next\")\n\n    def __init__(self, key: K, value: V) -> None:\n        self.key: K = key\n        self.value: V = value\n        self.prev: Optional[\"_Node[K, V]\"] = None\n        self.next: Optional[\"_Node[K, V]\"] = None\n\n\nclass LRUCache(Generic[K, V]):\n    \"\"\"\n    Least-Recently-Used cache with O(1) get and put.\n\n    Internally uses a hash map (dict) for O(1) lookup and a doubly-linked\n    list to track recency. The head of the list is the most-recently used\n    item; the tail is the least-recently used (eviction candidate).\n    \"\"\"\n\n    def __init",
+    "usage": {
+      "prompt_tokens": 63000,
+      "completion_tokens": 256,
+      "total_tokens": 63256,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0
+      }
+    },
+    "transport": "tcp",
+    "case": "prompt_63000",
+    "rep": 2,
+    "reply_sha256": "71f8043515bc9004a095544f41ba276022602781d93f695e9ee94a285e83644b",
+    "prompt_sha256": "fa7df9eff5cada97fdc95436d3b6d18de5515df52d72ddddd876f947bd29ffac"
+  }
+]
